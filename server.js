@@ -1,7 +1,7 @@
 const WebSocket = require('ws');
 
 const wss = new WebSocket.Server({ port: process.env.PORT || 10000 });
-const rooms = new Map(); // Map<roomId, { maxPlayers: number, slots: Array<{ playerId, name, avatar, ws } | null> }>
+const rooms = new Map(); // Map<roomId, { slots: Array<{ id: number, player: null | { playerId, name }, ws?: WebSocket }> }>
 const clients = new Set();
 
 wss.on('connection', (ws) => {
@@ -11,12 +11,14 @@ wss.on('connection', (ws) => {
     const data = JSON.parse(message.toString());
 
     if (data.type === 'create_room') {
-      const { playerId, name, avatar, maxPlayers } = data;
+      const { playerId, name, maxPlayers } = data;
       const roomId = Math.random().toString(36).substring(2, 8);
-      const slots = Array(maxPlayers).fill(null);
-      slots[maxPlayers - 1] = { playerId, name, avatar, ws }; // Создатель занимает нижнее место
 
-      rooms.set(roomId, { maxPlayers, slots });
+      const slots = Array.from({ length: maxPlayers }, (_, i) => ({ id: i, player: null }));
+      slots[maxPlayers - 1].player = { playerId, name };
+      slots[maxPlayers - 1].ws = ws;
+
+      rooms.set(roomId, { slots });
 
       ws.send(JSON.stringify({ type: 'room_created', roomId }));
       broadcastRoomList();
@@ -24,7 +26,7 @@ wss.on('connection', (ws) => {
     }
 
     if (data.type === 'join_room') {
-      const { roomId, playerId, name, avatar } = data;
+      const { roomId, playerId, name } = data;
       const room = rooms.get(roomId);
 
       if (!room) {
@@ -32,16 +34,16 @@ wss.on('connection', (ws) => {
         return;
       }
 
-      // Найти первое свободное место
-      const index = room.slots.findIndex((slot) => slot === null);
-      if (index === -1) {
+      const slot = room.slots.find((s) => !s.player);
+      if (!slot) {
         ws.send(JSON.stringify({ type: 'error', message: 'Комната заполнена' }));
         return;
       }
 
-      room.slots[index] = { playerId, name, avatar, ws };
-      ws.send(JSON.stringify({ type: 'room_joined', roomId }));
+      slot.player = { playerId, name };
+      slot.ws = ws;
 
+      ws.send(JSON.stringify({ type: 'room_joined', roomId }));
       broadcastRoomState(roomId);
       broadcastRoomList();
     }
@@ -58,12 +60,13 @@ wss.on('connection', (ws) => {
     for (const [roomId, room] of rooms.entries()) {
       let changed = false;
       for (let i = 0; i < room.slots.length; i++) {
-        if (room.slots[i]?.ws === ws) {
-          room.slots[i] = null;
+        if (room.slots[i].ws === ws) {
+          room.slots[i].player = null;
+          room.slots[i].ws = undefined;
           changed = true;
         }
       }
-      if (room.slots.every((slot) => slot === null)) {
+      if (room.slots.every((slot) => !slot.player)) {
         rooms.delete(roomId);
       } else if (changed) {
         broadcastRoomState(roomId);
@@ -89,19 +92,15 @@ function broadcastRoomState(roomId) {
   const room = rooms.get(roomId);
   if (!room) return;
 
-  const players = room.slots.map((slot) => {
-    if (!slot) return null;
-    return {
-      playerId: slot.playerId,
-      name: slot.name,
-      avatar: slot.avatar,
-    };
-  });
+  const slots = room.slots.map((slot) => ({
+    id: slot.id,
+    player: slot.player ? { playerId: slot.player.playerId, name: slot.player.name } : null
+  }));
 
   for (const slot of room.slots) {
-    if (!slot) continue;
+    if (!slot.ws) continue;
     try {
-      slot.ws.send(JSON.stringify({ type: 'room_state', players }));
+      slot.ws.send(JSON.stringify({ type: 'room_state', slots }));
     } catch (err) {
       console.error('Ошибка при отправке состояния комнаты:', err.message);
     }
