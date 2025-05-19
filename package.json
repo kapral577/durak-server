@@ -2,12 +2,19 @@
   "name": "durak-server",
   "version": "1.0.0",
   "description": "WebSocket сервер для игры Дурак",
-  "main": "server.js",
+  "main": "dist/server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node dist/server.js",
+    "dev": "ts-node server.ts",
+    "build": "tsc"
   },
   "dependencies": {
     "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/ws": "^8.5.4",
+    "ts-node": "^10.9.1"
   },
   "keywords": [],
   "author": "",
