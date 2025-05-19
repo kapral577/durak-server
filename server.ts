@@ -68,11 +68,17 @@ wss.on('connection', (ws: WebSocket, _req: IncomingMessage) => {
         const roomId = Math.random().toString(36).substring(2, 8);
 
         const slots: Slot[] = Array.from({ length: maxPlayers }, (_, i) => ({ id: i, player: null }));
+        // 🔥 Сразу помещаем создателя игры в первый слот
+        slots[0].player = { playerId, name };
+        slots[0].ws = ws;
 
         rooms.set(roomId, { slots, rules });
 
         ws.send(JSON.stringify({ type: 'room_created', roomId }));
-        // ⛔ не рассылаем другим клиентам пока игрок не вошёл в комнату
+
+        // ✅ Теперь можно безопасно отправить другим
+        broadcastRoomState(roomId);
+        broadcastRoomList();
         break;
       }
 
@@ -96,7 +102,7 @@ wss.on('connection', (ws: WebSocket, _req: IncomingMessage) => {
 
         ws.send(JSON.stringify({ type: 'room_joined', roomId }));
         broadcastRoomState(roomId);
-        broadcastRoomList(); // ✅ только теперь можно расслать комнату другим
+        broadcastRoomList();
         break;
       }
 
