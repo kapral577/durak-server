@@ -1,7 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
 
-// Типы для игрока и слота
 interface Player {
   playerId: string;
   name: string;
@@ -13,7 +12,14 @@ interface Slot {
   ws?: WebSocket;
 }
 
+interface Rules {
+  gameMode: string;
+  throwingMode: string;
+  cardCount: number;
+}
+
 interface Room {
+  rules: Rules;
   slots: Slot[];
 }
 
@@ -21,7 +27,8 @@ interface CreateRoomMessage {
   type: 'create_room';
   playerId: string;
   name: string;
-  maxPlayers?: number;
+  rules: Rules;
+  maxPlayers: number;
 }
 
 interface JoinRoomMessage {
@@ -35,7 +42,6 @@ interface GetRoomsMessage {
   type: 'get_rooms';
 }
 
-// Объединённый тип входящих сообщений
 type ClientMessage = CreateRoomMessage | JoinRoomMessage | GetRoomsMessage;
 
 const PORT = parseInt(process.env.PORT || '10000');
@@ -49,7 +55,6 @@ wss.on('connection', (ws: WebSocket, _req: IncomingMessage) => {
 
   ws.on('message', (raw) => {
     let data: ClientMessage;
-
     try {
       data = JSON.parse(raw.toString());
     } catch {
@@ -59,18 +64,15 @@ wss.on('connection', (ws: WebSocket, _req: IncomingMessage) => {
 
     switch (data.type) {
       case 'create_room': {
-        const { playerId, name, maxPlayers = 4 } = data;
+        const { playerId, name, maxPlayers, rules } = data;
         const roomId = Math.random().toString(36).substring(2, 8);
 
         const slots: Slot[] = Array.from({ length: maxPlayers }, (_, i) => ({ id: i, player: null }));
-        slots[0].player = { playerId, name };
-        slots[0].ws = ws;
 
-        rooms.set(roomId, { slots });
+        rooms.set(roomId, { slots, rules });
 
         ws.send(JSON.stringify({ type: 'room_created', roomId }));
-        broadcastRoomList();
-        broadcastRoomState(roomId);
+        // ⛔ не рассылаем другим клиентам пока игрок не вошёл в комнату
         break;
       }
 
@@ -94,12 +96,20 @@ wss.on('connection', (ws: WebSocket, _req: IncomingMessage) => {
 
         ws.send(JSON.stringify({ type: 'room_joined', roomId }));
         broadcastRoomState(roomId);
-        broadcastRoomList();
+        broadcastRoomList(); // ✅ только теперь можно расслать комнату другим
         break;
       }
 
       case 'get_rooms': {
-        const list = [...rooms.keys()];
+        const list = [...rooms.entries()].map(([roomId, room]) => ({
+          roomId,
+          rules: room.rules,
+          slots: room.slots.map((slot) => ({
+            id: slot.id,
+            player: slot.player ? { playerId: slot.player.playerId, name: slot.player.name } : null,
+          })),
+        }));
+
         ws.send(JSON.stringify({ type: 'rooms_list', rooms: list }));
         break;
       }
@@ -131,7 +141,15 @@ wss.on('connection', (ws: WebSocket, _req: IncomingMessage) => {
 });
 
 function broadcastRoomList(): void {
-  const list = [...rooms.keys()];
+  const list = [...rooms.entries()].map(([roomId, room]) => ({
+    roomId,
+    rules: room.rules,
+    slots: room.slots.map((slot) => ({
+      id: slot.id,
+      player: slot.player ? { playerId: slot.player.playerId, name: slot.player.name } : null,
+    })),
+  }));
+
   for (const client of clients) {
     try {
       client.send(JSON.stringify({ type: 'rooms_list', rooms: list }));
