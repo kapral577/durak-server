@@ -1,5 +1,8 @@
-import { WebSocketServer, WebSocket } from 'ws';
-import { IncomingMessage } from 'http';
+// server.ts
+import { WebSocketServer } from 'ws';
+import { v4 as uuidv4 } from 'uuid';
+
+const wss = new WebSocketServer({ port: 8080 });
 
 interface Player {
   playerId: string;
@@ -10,74 +13,35 @@ interface Slot {
   id: number;
   player: Player | null;
   ws?: WebSocket;
-}
-
-interface Rules {
-  gameMode: string;
-  throwingMode: string;
-  cardCount: number;
+  ready?: boolean;
 }
 
 interface Room {
-  rules: Rules;
   slots: Slot[];
+  rules: any;
+  phase: 'waiting' | 'playing';
 }
-
-interface CreateRoomMessage {
-  type: 'create_room';
-  playerId: string;
-  name: string;
-  rules: Rules;
-  maxPlayers: number;
-}
-
-interface JoinRoomMessage {
-  type: 'join_room';
-  roomId: string;
-  playerId: string;
-  name: string;
-}
-
-interface GetRoomsMessage {
-  type: 'get_rooms';
-}
-
-type ClientMessage = CreateRoomMessage | JoinRoomMessage | GetRoomsMessage;
-
-const PORT = parseInt(process.env.PORT || '10000');
-const wss = new WebSocketServer({ port: PORT });
 
 const rooms = new Map<string, Room>();
-const clients = new Set<WebSocket>();
 
-wss.on('connection', (ws: WebSocket, _req: IncomingMessage) => {
-  clients.add(ws);
-
-  ws.on('message', (raw) => {
-    let data: ClientMessage;
-    try {
-      data = JSON.parse(raw.toString());
-    } catch {
-      ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' }));
-      return;
-    }
+wss.on('connection', (ws) => {
+  ws.on('message', (message) => {
+    const data = JSON.parse(message.toString());
 
     switch (data.type) {
       case 'create_room': {
-        const { playerId, name, maxPlayers, rules } = data;
-        const roomId = Math.random().toString(36).substring(2, 8);
+        const roomId = uuidv4();
+        const slotCount = data.maxPlayers || 2;
+        const slots: Slot[] = Array.from({ length: slotCount }, (_, i) => ({ id: i, player: null }));
 
-        const slots: Slot[] = Array.from({ length: maxPlayers }, (_, i) => ({ id: i, player: null }));
-        // 🔥 Сразу помещаем создателя игры в первый слот
-        slots[0].player = { playerId, name };
+        // Создатель занимает первый слот
+        slots[0].player = { playerId: data.playerId, name: data.name };
         slots[0].ws = ws;
+        slots[0].ready = false;
 
-        rooms.set(roomId, { slots, rules });
+        rooms.set(roomId, { slots, rules: data.rules, phase: 'waiting' });
 
         ws.send(JSON.stringify({ type: 'room_created', roomId }));
-
-        // ✅ Теперь можно безопасно отправить другим
-        broadcastRoomState(roomId);
         broadcastRoomList();
         break;
       }
@@ -85,20 +49,14 @@ wss.on('connection', (ws: WebSocket, _req: IncomingMessage) => {
       case 'join_room': {
         const { roomId, playerId, name } = data;
         const room = rooms.get(roomId);
+        if (!room) return;
 
-        if (!room) {
-          ws.send(JSON.stringify({ type: 'error', message: 'Комната не найдена' }));
-          return;
+        const emptySlot = room.slots.find(s => !s.player);
+        if (emptySlot) {
+          emptySlot.player = { playerId, name };
+          emptySlot.ws = ws;
+          emptySlot.ready = false;
         }
-
-        const freeSlot = room.slots.find((s) => !s.player);
-        if (!freeSlot) {
-          ws.send(JSON.stringify({ type: 'error', message: 'Комната заполнена' }));
-          return;
-        }
-
-        freeSlot.player = { playerId, name };
-        freeSlot.ws = ws;
 
         ws.send(JSON.stringify({ type: 'room_joined', roomId }));
         broadcastRoomState(roomId);
@@ -107,81 +65,90 @@ wss.on('connection', (ws: WebSocket, _req: IncomingMessage) => {
       }
 
       case 'get_rooms': {
-        const list = [...rooms.entries()].map(([roomId, room]) => ({
-          roomId,
-          rules: room.rules,
-          slots: room.slots.map((slot) => ({
-            id: slot.id,
-            player: slot.player ? { playerId: slot.player.playerId, name: slot.player.name } : null,
-          })),
-        }));
+        broadcastRoomList(ws);
+        break;
+      }
 
-        ws.send(JSON.stringify({ type: 'rooms_list', rooms: list }));
+      case 'set_ready': {
+        const { playerId } = data;
+        for (const [roomId, room] of rooms.entries()) {
+          const slot = room.slots.find(s => s.player?.playerId === playerId);
+          if (slot) {
+            slot.ready = true;
+
+            const allReady = room.slots.every(s => s.player && s.ready);
+            if (allReady) {
+              room.phase = 'playing';
+              for (const s of room.slots) {
+                s.ws?.send(JSON.stringify({ type: 'start_game' }));
+              }
+            } else {
+              broadcastRoomState(roomId);
+            }
+            break;
+          }
+        }
         break;
       }
     }
   });
 
   ws.on('close', () => {
-    clients.delete(ws);
-
     for (const [roomId, room] of rooms.entries()) {
       let changed = false;
       for (const slot of room.slots) {
         if (slot.ws === ws) {
           slot.player = null;
           slot.ws = undefined;
+          slot.ready = false;
           changed = true;
         }
       }
 
-      if (room.slots.every((slot) => !slot.player)) {
+      if (room.slots.every(s => !s.player)) {
         rooms.delete(roomId);
       } else if (changed) {
         broadcastRoomState(roomId);
       }
     }
-
     broadcastRoomList();
   });
 });
 
-function broadcastRoomList(): void {
-  const list = [...rooms.entries()].map(([roomId, room]) => ({
-    roomId,
+function broadcastRoomList(target?: WebSocket) {
+  const roomSummaries = Array.from(rooms.entries()).map(([id, room]) => ({
+    roomId: id,
     rules: room.rules,
-    slots: room.slots.map((slot) => ({
-      id: slot.id,
-      player: slot.player ? { playerId: slot.player.playerId, name: slot.player.name } : null,
-    })),
+    slots: room.slots.map(s => ({ id: s.id, player: s.player }))
   }));
 
-  for (const client of clients) {
-    try {
-      client.send(JSON.stringify({ type: 'rooms_list', rooms: list }));
-    } catch (err) {
-      console.error('Ошибка при отправке списка комнат:', (err as Error).message);
+  const message = JSON.stringify({ type: 'rooms_list', rooms: roomSummaries });
+
+  if (target) {
+    target.send(message);
+  } else {
+    for (const client of wss.clients) {
+      if (client.readyState === 1) {
+        client.send(message);
+      }
     }
   }
 }
 
-function broadcastRoomState(roomId: string): void {
+function broadcastRoomState(roomId: string) {
   const room = rooms.get(roomId);
   if (!room) return;
 
-  const slots = room.slots.map((slot) => ({
-    id: slot.id,
-    player: slot.player ? { playerId: slot.player.playerId, name: slot.player.name } : null,
-  }));
+  const message = JSON.stringify({
+    type: 'room_state',
+    slots: room.slots.map(s => ({
+      id: s.id,
+      player: s.player,
+      ready: s.ready || false
+    }))
+  });
 
   for (const slot of room.slots) {
-    if (!slot.ws) continue;
-    try {
-      slot.ws.send(JSON.stringify({ type: 'room_state', slots }));
-    } catch (err) {
-      console.error('Ошибка при отправке состояния комнаты:', (err as Error).message);
-    }
+    slot.ws?.send(message);
   }
 }
-
-console.log(`✅ WebSocket сервер запущен на ws://localhost:${PORT}`);
