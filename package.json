@@ -9,11 +9,13 @@
     "build": "tsc"
   },
   "dependencies": {
+    "uuid": "^11.1.0",
     "ws": "^8.16.0"
   },
   "devDependencies": {
     "@types/react": "^19.1.4",
     "@types/react-dom": "^19.1.5",
+    "@types/uuid": "^10.0.0",
     "@types/ws": "^8.5.4",
     "ts-node": "^10.9.1",
     "typescript": "^5.4.0"
