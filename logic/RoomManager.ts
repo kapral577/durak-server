@@ -1,4 +1,4 @@
-mport { Room } from '../types/Room';
+import { Room } from '../types/Room';
 import { Player } from '../types/Player';
 import { v4 as uuidv4 } from 'uuid';
 
