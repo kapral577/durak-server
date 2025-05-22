@@ -1,4 +1,4 @@
-import { RoomManagerInstance } from './RoomManager';
+import { RoomManagerInstance } from './RoomManager.js';
 
 export function messageHandler(socket: WebSocket, message: string) {
   const data = JSON.parse(message);
@@ -30,13 +30,7 @@ export function messageHandler(socket: WebSocket, message: string) {
       break;
     }
 
-    // Дополнительно можешь добавить:
-    // case 'set_ready':
-    // case 'take_cards':
-    // case 'end_turn':
-    // и другие игровые события
-
     default:
-      console.warn('Unknown message type:', data.type);
+      console.warn('⚠️ Unknown message type:', data.type);
   }
 }

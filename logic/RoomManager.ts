@@ -1,4 +1,4 @@
-import { Room } from './Room';
+import { Room } from './Room.js';
 
 class RoomManager {
   private rooms: Map<string, Room> = new Map();
@@ -39,10 +39,10 @@ class RoomManager {
   }
 
   broadcastRooms() {
-    const roomsList = this.getRooms();
+    const rooms = this.getRooms();
     this.broadcast({
       type: 'rooms_list',
-      rooms: roomsList,
+      rooms,
     });
   }
 }

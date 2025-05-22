@@ -1,22 +1,16 @@
-import { WebSocketServer, WebSocket } from 'ws';
-import { handleMessage } from './logic/messageHandler';
-import { v4 as uuidv4 } from 'uuid';
+import { WebSocketServer } from 'ws';
+import { messageHandler } from './logic/messageHandler.js'; // ESM-совместимый импорт
 
-const PORT = process.env.PORT || 3000;
-const wss = new WebSocketServer({ port: Number(PORT) });
+const wss = new WebSocketServer({ port: 8080 });
 
-console.log(`🚀 WebSocket сервер запущен на порту ${PORT}`);
-
-wss.on('connection', (ws: WebSocket) => {
-  const playerId = uuidv4();
-  console.log(`🧍 Игрок подключён: ${playerId}`);
-
-  ws.on('message', (data) => {
-    handleMessage(ws, data.toString(), playerId);
-  });
-
-  ws.on('close', () => {
-    console.log(`❌ Игрок отключился: ${playerId}`);
-    // TODO: вызвать roomManager.leaveRoom() если надо
+wss.on('connection', (socket) => {
+  socket.on('message', (data) => {
+    try {
+      messageHandler(socket, data.toString());
+    } catch (err) {
+      console.error('❌ Error handling message:', err);
+    }
   });
 });
+
+console.log('✅ WebSocket server running on ws://localhost:8080');
