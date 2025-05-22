@@ -1,5 +1,5 @@
 import { WebSocketServer, WebSocket } from 'ws';
-import { handleMessage } from './logic/messageHandler';
+import { handleMessage } from './logic/messageHandler.js';
 import { v4 as uuidv4 } from 'uuid';
 
 const PORT = process.env.PORT || 3000;
