@@ -1,5 +1,6 @@
 import { roomManager } from './RoomManager';
 import { Player } from '../types/Player';
+import { startGame } from './startGame';
 
 export function handleMessage(ws: any, rawData: string, playerId: string) {
   let msg: any;
@@ -38,6 +39,56 @@ export function handleMessage(ws: any, rawData: string, playerId: string) {
         ws.send(JSON.stringify({ type: 'joined_room', roomId: msg.roomId, playerId }));
       } else {
         ws.send(JSON.stringify({ type: 'error', message: 'Не удалось войти в комнату' }));
+      }
+      break;
+    }
+
+    case 'set_ready': {
+      const room = roomManager.getRoom(msg.roomId);
+      if (!room) break;
+
+      const player = room.players.find((p) => p.id === playerId);
+      if (player) player.isReady = true;
+
+      const allReady = room.players.length > 1 && room.players.every((p) => p.isReady);
+      if (allReady) {
+        startGame(room);
+      }
+      break;
+    }
+
+    case 'take_cards': {
+      const room = roomManager.getRoom(msg.roomId);
+      if (!room || !room.gameState) break;
+
+      // TODO: логика добора карт и завершения раунда
+      room.gameState.phase = 'waiting'; // временно
+
+      for (const p of room.players) {
+        p.ws.send(
+          JSON.stringify({
+            type: 'update_state',
+            message: `${playerId} берет карты. Раунд завершён.`
+          })
+        );
+      }
+      break;
+    }
+
+    case 'end_turn': {
+      const room = roomManager.getRoom(msg.roomId);
+      if (!room || !room.gameState) break;
+
+      // TODO: логика конца хода, передача атаки и т.д.
+      room.gameState.phase = 'waiting'; // временно
+
+      for (const p of room.players) {
+        p.ws.send(
+          JSON.stringify({
+            type: 'update_state',
+            message: `${playerId} завершает ход.`
+          })
+        );
       }
       break;
     }
