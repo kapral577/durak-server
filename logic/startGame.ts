@@ -1,71 +1,61 @@
-import { Room } from '../logic/Room.js'; // ✅ class Room
-import { GameState } from '../types/GameState';
+import { GameState } from '../types/GameState.js';
+import type { Rules } from '../types/rules.js';
+import type { Slot } from './Room.js';
 
-const SUITS = ['♠', '♥', '♦', '♣'];
-const RANKS = ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+interface StartGameInput {
+  roomId: string;
+  rules: Rules;
+  slots: Slot[];
+}
 
-export function startGame(room: Room) {
-  const fullDeck = createDeck(room.rules.cardCount);
-  shuffle(fullDeck);
+export function startGame({ roomId, rules, slots }: StartGameInput): GameState {
+  const players = slots
+    .filter((s) => s.player !== null)
+    .map((s, index) => ({
+      id: s.player!.playerId,
+      name: s.player!.name,
+      hand: [],
+      isReady: false,
+      index,
+    }));
 
-  const players = room.players;
-  const cardsPerPlayer = 6;
+  const deck: string[] = generateDeck(rules.cardCount);
+  const shuffled = shuffle(deck);
 
-  // Раздача карт
-  players.forEach((player) => {
-    player.hand = fullDeck.splice(0, cardsPerPlayer);
-  });
+  const handSize = 6;
+  for (let i = 0; i < players.length; i++) {
+    players[i].hand = shuffled.splice(0, handSize);
+  }
 
-  const trumpCard = fullDeck[0];
+  const trumpCard = shuffled.pop()!;
   const trumpSuit = trumpCard.slice(-1);
 
   const gameState: GameState = {
-    players,
-    deck: fullDeck,
-    table: [],
-    trumpSuit,
-    currentAttackerIndex: 0,
-    currentDefenderIndex: 1,
     phase: 'playing',
+    players,
+    table: [],
+    deck: shuffled,
+    trumpCard,
+    trumpSuit,
+    attackerIndex: 0,
+    defenderIndex: 1,
+    roomId,
   };
 
-  room.gameState = gameState;
-
-  // Рассылка всем игрокам стартового состояния
-  for (const player of players) {
-    player.ws.send(
-      JSON.stringify({
-        type: 'start_game',
-        state: {
-          you: {
-            id: player.id,
-            name: player.name,
-            hand: player.hand,
-          },
-          players: players.map((p) => ({ id: p.id, name: p.name, hand: new Array(p.hand.length) })),
-          table: [],
-          trumpSuit,
-          currentAttackerIndex: 0,
-          phase: 'playing',
-        },
-      })
-    );
-  }
+  return gameState;
 }
 
-function createDeck(cardCount: number): string[] {
-  const baseDeck = [];
-  for (const suit of SUITS) {
-    for (const rank of RANKS) {
-      baseDeck.push(rank + suit);
-    }
-  }
-  return cardCount === 36 ? baseDeck.slice(0, 36) : baseDeck;
+// 🔁 Вспомогательные функции:
+
+function generateDeck(count: number): string[] {
+  const suits = ['♠', '♥', '♦', '♣'];
+  const values =
+    count === 36
+      ? ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+      : ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+  return suits.flatMap((suit) => values.map((value) => value + suit));
 }
 
-function shuffle(array: any[]) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
+function shuffle<T>(arr: T[]): T[] {
+  return [...arr].sort(() => Math.random() - 0.5);
 }
