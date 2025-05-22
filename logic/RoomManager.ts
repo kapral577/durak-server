@@ -1,68 +1,50 @@
-import { Room } from '../types/Room';
-import { Player } from '../types/Player';
-import { v4 as uuidv4 } from 'uuid';
+import { Room } from './Room.js';
 
 class RoomManager {
   private rooms: Map<string, Room> = new Map();
 
-  createRoom(maxPlayers: number, rules: Room['rules']): string {
-    const roomId = uuidv4();
-    const slots = Array.from({ length: maxPlayers }, (_, i) => ({ id: i, player: null }));
-
-    this.rooms.set(roomId, {
-      id: roomId,
-      players: [],
-      maxPlayers,
-      gameState: null,
-      rules,
-      slots
-    });
-
-    return roomId;
+  createRoom(roomId: string, rules: any, maxPlayers: number) {
+    const room = new Room(roomId, rules, maxPlayers);
+    this.rooms.set(roomId, room);
+    this.broadcastRooms();
   }
 
-  getRoom(roomId: string): Room | undefined {
-    return this.rooms.get(roomId);
-  }
-
-  removeRoom(roomId: string) {
-    this.rooms.delete(roomId);
-  }
-
-  joinRoom(roomId: string, player: Player): boolean {
-    const room = this.rooms.get(roomId);
-    if (!room || room.players.length >= room.maxPlayers) return false;
-
-    room.players.push(player);
-
-    // Засаживаем в первый свободный слот
-    const emptySlot = room.slots.find((s) => s.player === null);
-    if (emptySlot) {
-      emptySlot.player = { playerId: player.id, name: player.name };
-    }
-
-    return true;
-  }
-
-  leaveRoom(roomId: string, playerId: string) {
+  joinRoom(roomId: string, socket: WebSocket) {
     const room = this.rooms.get(roomId);
     if (!room) return;
+    room.addPlayer(socket);
+    this.broadcastRooms();
+  }
 
-    room.players = room.players.filter((p) => p.id !== playerId);
-    room.slots.forEach((s) => {
-      if (s.player?.playerId === playerId) s.player = null;
-    });
-
-    if (room.players.length === 0) {
-      this.rooms.delete(roomId);
+  leaveRoom(socket: WebSocket) {
+    for (const room of this.rooms.values()) {
+      if (room.removePlayer(socket)) {
+        this.broadcastRooms();
+        break;
+      }
     }
   }
 
-  listRooms(): Room[] {
-    return Array.from(this.rooms.values()).filter(
-      (r) => r.players.length > 0 || r.slots.some((s) => s.player !== null)
-    );
+  getRooms() {
+    return Array.from(this.rooms.values())
+      .filter(room => room.hasPlayers())
+      .map(room => room.toPublicInfo());
+  }
+
+  broadcast(data: any) {
+    const message = JSON.stringify(data);
+    for (const room of this.rooms.values()) {
+      room.broadcast(message);
+    }
+  }
+
+  broadcastRooms() {
+    const roomsList = this.getRooms();
+    this.broadcast({
+      type: 'rooms_list',
+      rooms: roomsList,
+    });
   }
 }
 
-export const roomManager = new RoomManager();
+export const RoomManagerInstance = new RoomManager();
