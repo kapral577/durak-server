@@ -1,4 +1,4 @@
-import { Room } from '../types/Room';
+import { Room } from '../logic/Room.js'; // ✅ class Room
 import { GameState } from '../types/GameState';
 
 const SUITS = ['♠', '♥', '♦', '♣'];
