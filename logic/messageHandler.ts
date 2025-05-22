@@ -1,5 +1,5 @@
 import type { WebSocket } from 'ws';
-import { RoomManagerInstance } from './RoomManager'; // ✅ без .js
+import { RoomManagerInstance } from './RoomManager.js'; // ✅ без .js
 
 export function messageHandler(socket: WebSocket, message: string) {
   const data = JSON.parse(message);
