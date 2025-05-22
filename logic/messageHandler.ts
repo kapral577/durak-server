@@ -1,4 +1,4 @@
-import { RoomManagerInstance } from './RoomManager.js';
+import { RoomManagerInstance } from './RoomManager';
 
 export function messageHandler(socket: WebSocket, message: string) {
   const data = JSON.parse(message);

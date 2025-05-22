@@ -1,4 +1,4 @@
-import { Room } from './Room.js';
+import { Room } from './Room';
 
 class RoomManager {
   private rooms: Map<string, Room> = new Map();
