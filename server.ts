@@ -1,5 +1,5 @@
 import { WebSocketServer } from 'ws';
-import { messageHandler } from './logic/messageHandler.js'; // ESM-совместимый импорт
+import { messageHandler } from './logic/messageHandler'; // ✅ без .js
 
 const wss = new WebSocketServer({ port: 8080 });
 

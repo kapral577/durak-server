@@ -1,4 +1,5 @@
-import { Room } from './Room.js';
+import type { WebSocket } from 'ws';
+import { Room } from './Room'; // ✅ без .js
 
 class RoomManager {
   private rooms: Map<string, Room> = new Map();
