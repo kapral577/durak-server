@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "dist/server.js",
   "license": "MIT",
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js"

@@ -8,5 +8,5 @@
     "strict": true,
     "outDir": "dist"
   },
-  "include": ["server.ts"]
+  "include": ["server.ts", "logic/**/*", "types/**/*"]
 }
