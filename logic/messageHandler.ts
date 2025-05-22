@@ -1,6 +1,6 @@
-import { roomManager } from './RoomManager';
-import { Player } from '../types/Player';
-import { startGame } from './startGame';
+import { roomManager } from './RoomManager.js';
+import { Player } from '../types/Player.js';
+import { startGame } from './startGame.js';
 
 export function handleMessage(ws: any, rawData: string, playerId: string) {
   let msg: any;
