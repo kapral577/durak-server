@@ -1,5 +1,8 @@
-import type { WebSocket } from 'ws';
+import { WebSocket } from 'ws';
+import { v4 as uuidv4 } from 'uuid';
+
 import { Player } from '../types/Player.js';
+import type { Rules } from '../types/Rules.js';
 
 /* ─────────── Локальные типы ─────────── */
 
@@ -8,19 +11,13 @@ interface PlayerInfo {
   name: string;
 }
 
-/**   Публичный вид слота – передаётся клиенту */
+/**   Экспортируемый слот (выдаётся клиенту) */
 export interface Slot {
   id: number;
   player: PlayerInfo | null;
 }
 
-interface Rules {
-  gameMode: string;
-  throwingMode: string;
-  cardCount: number;
-}
-
-/**   Расширенная серверная модель игрока (с сокетом) */
+/**   Расширенная модель игрока для сервера  */
 interface ConnectedPlayer extends Player {
   ws: WebSocket;
 }
@@ -42,14 +39,15 @@ export class Room {
     }));
   }
 
-  /* Добавление игрока в первый свободный слот */
+  /* Добавляем игрока в первый свободный слот */
   addPlayer(socket: WebSocket) {
+    // не добавляем дубликаты
     if (this.players.some((p) => p.ws === socket)) return;
 
     const free = this.slots.find((s) => s.player === null);
     if (!free) return;
 
-    const playerId = crypto.randomUUID();
+    const playerId = uuidv4();
     const name = `Игрок ${playerId.slice(0, 4)}`;
 
     free.player = { playerId, name };
@@ -61,20 +59,20 @@ export class Room {
       isReady: false,
       ws: socket,
     });
-
-    // помечаем сокет для быстрого поиска при disconnect
-    (socket as any).playerId = playerId;
   }
 
-  /* Удаление игрока; возвращает true, если кто‑то вышел */
+  /* Удаляем игрока по сокету; true, если кто-то ушёл */
   removePlayer(socket: WebSocket): boolean {
-    const playerId = (socket as any).playerId;
-    if (!playerId) return false;
+    const idx = this.players.findIndex((p) => p.ws === socket);
+    if (idx === -1) return false;
 
-    const slot = this.slots.find((s) => s.player?.playerId === playerId);
+    const goneId = this.players[idx].id;
+
+    // очищаем слот
+    const slot = this.slots.find((s) => s.player?.playerId === goneId);
     if (slot) slot.player = null;
 
-    this.players = this.players.filter((p) => p.ws !== socket);
+    this.players.splice(idx, 1);
     return true;
   }
 
@@ -82,7 +80,7 @@ export class Room {
     return this.players.length > 0;
   }
 
-  /* ───── Публичная информация для rooms_list ───── */
+  /* ───── Публичная информация комнаты (для rooms_list) ───── */
   toPublicInfo() {
     return {
       roomId: this.roomId,
@@ -96,12 +94,12 @@ export class Room {
     };
   }
 
-  /* Возвращаем «чистых» игроков без ws для GameState */
+  /* Игроки без ws — для GameState / клиента */
   getPublicPlayers(): Player[] {
     return this.players.map(({ ws, ...rest }) => rest);
   }
 
-  /* Рассылаем сообщение всем игрокам в комнате */
+  /* Рассылаем сообщение всем в комнате */
   broadcast(data: any) {
     const msg = JSON.stringify(data);
     this.players.forEach(({ ws }) => {
