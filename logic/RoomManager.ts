@@ -10,23 +10,31 @@ class RoomManager {
   /* ───────────── CRUD комнат ───────────── */
 
   createRoom(roomId: string, rules: any, maxPlayers: number) {
-    if (this.rooms.has(roomId)) return;          // защитимся от дубликатов
+    if (this.rooms.has(roomId)) return;
+
     const room = new Room(roomId, rules, maxPlayers);
     this.rooms.set(roomId, room);
+
     this.broadcastRooms();
   }
 
   joinRoom(roomId: string, socket: WebSocket) {
     const room = this.rooms.get(roomId);
     if (!room) return;
+
     room.addPlayer(socket);
+
+    /* ← рассылаем обновлённые слоты */
+    room.broadcast({ type: 'slots', slots: room.slots });
     this.broadcastRooms();
   }
 
   leaveRoom(socket: WebSocket) {
     for (const room of this.rooms.values()) {
       if (room.removePlayer(socket)) {
-        // если комната опустела — удаляем её
+        /* обновлённые слоты */
+        room.broadcast({ type: 'slots', slots: room.slots });
+
         if (!room.hasPlayers()) this.rooms.delete(room.roomId);
         this.broadcastRooms();
         break;
@@ -40,18 +48,15 @@ class RoomManager {
     const room = this.rooms.get(roomId);
     if (!room) return;
 
-    // отмечаем готовность в слотах
-    const slot = room.slots.find((s) => s.player?.playerId === playerId);
-    if (!slot || !slot.player) return;
+    room.markPlayerReady(playerId);
 
-    // пресеты ‘ready’ можно хранить в Player.isReady
-    const player = room.getPublicPlayers().find((p) => p.id === playerId);
-    if (player) player.isReady = true;
+    /* обновляем отображение готовности */
+    room.broadcast({ type: 'slots', slots: room.slots });
 
-    // если все занятые слоты готовы — стартуем
-    const everyoneReady = room
-      .getPublicPlayers()
-      .every((p) => p.isReady);
+    /* если все занятые слоты готовы — стартуем игру */
+    const everyoneReady = room.slots
+      .filter((s) => s.player !== null)
+      .every((s) => s.player?.isReady);
 
     if (everyoneReady) {
       const state: GameState = startGame({
@@ -61,8 +66,6 @@ class RoomManager {
       });
       room.broadcast({ type: 'start_game', state });
     }
-
-    this.broadcastRooms();
   }
 
   /* ───────────── rooms_list ───────────── */
@@ -70,6 +73,7 @@ class RoomManager {
   private broadcastRooms() {
     const list = this.getRooms();
     const payload = JSON.stringify({ type: 'rooms_list', rooms: list });
+
     for (const room of this.rooms.values()) {
       room.broadcast(payload);
     }

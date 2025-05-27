@@ -1,4 +1,4 @@
-import { RoomManagerInstance } from './RoomManager'; // ✅ без .js
+import { RoomManagerInstance } from './RoomManager.js'; // ✅ без .js
 export function messageHandler(socket, message) {
     const data = JSON.parse(message);
     switch (data.type) {

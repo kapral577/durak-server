@@ -1,10 +1,11 @@
 import type { WebSocket } from 'ws';
-import { RoomManagerInstance } from './RoomManager.js'; // ✅ без .js
+import { RoomManagerInstance } from './RoomManager.js';
 
 export function messageHandler(socket: WebSocket, message: string) {
   const data = JSON.parse(message);
 
   switch (data.type) {
+    /* ────────── Управление комнатами ────────── */
     case 'create_room': {
       const { roomId, rules, maxPlayers } = data;
       RoomManagerInstance.createRoom(roomId, rules, maxPlayers);
@@ -22,12 +23,22 @@ export function messageHandler(socket: WebSocket, message: string) {
       break;
     }
 
+    /* ────────── Готовность игрока ────────── */
+    case 'set_ready': {
+      const { roomId, playerId } = data;
+      RoomManagerInstance.setReady(roomId, playerId);
+      break;
+    }
+
+    /* ────────── Список комнат ────────── */
     case 'get_rooms': {
       const rooms = RoomManagerInstance.getRooms();
-      socket.send(JSON.stringify({
-        type: 'rooms_list',
-        rooms,
-      }));
+      socket.send(
+        JSON.stringify({
+          type: 'rooms_list',
+          rooms,
+        })
+      );
       break;
     }
 
