@@ -33,20 +33,21 @@ export function startGame({ roomId, rules, slots }: StartGameInput): GameState {
   const trumpSuit = trumpCard.slice(-1);
 
   const gameState: GameState = {
+    roomId,            // ← добавлено
     phase: 'playing',
     players,
     deck,
     table: [],
+    trumpCard,         // ← добавлено
     trumpSuit,
     currentAttackerIndex: 0,
     currentDefenderIndex: 1,
-    roomId,
   };
 
   return gameState;
 }
 
-/* ─────────── Вспомогалки ─────────── */
+/* ─────────── Вспомогалки ─────────── */
 
 function generateDeck(count: number): string[] {
   const suits = ['♠', '♥', '♦', '♣'];
