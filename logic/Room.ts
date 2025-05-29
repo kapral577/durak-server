@@ -2,24 +2,9 @@ import { WebSocket } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 
 import { Player } from '../types/Player.js';
+import { ConnectedPlayer } from './ConnectedPlayer.js';
 import type { Rules } from '../types/Rules.js';
-
-/* ────────── локальные типы ────────── */
-
-interface PlayerInfo {
-  playerId: string;
-  name: string;
-  isReady: boolean;
-}
-
-export interface Slot {
-  id: number;
-  player: PlayerInfo | null;
-}
-
-interface ConnectedPlayer extends Player {
-  ws: WebSocket;
-}
+import type { PlayerInfo, Slot } from '../types/Room.js'; // ✅ Используем типы из types/
 
 /* ────────── класс Room ────────── */
 

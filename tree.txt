@@ -1,0 +1,940 @@
+Ñòðóêòóðà ïàïîê
+Ñåðèéíûé íîìåð òîìà: 90EF-C321
+C:.
+¦   package-lock.json
+¦   package.json
+¦   server.ts
+¦   tree.txt
+¦   tsconfig.json
+¦   
++---dist
+¦   ¦   server.js
+¦   ¦   
+¦   +---logic
+¦   ¦       ConnectedPlayer.js
+¦   ¦       messageHandler.js
+¦   ¦       Room.js
+¦   ¦       RoomManager.js
+¦   ¦       startGame.js
+¦   ¦       
+¦   L---types
+¦           GameState.js
+¦           Player.js
+¦           Room.js
+¦           Rules.js
+¦           
++---logic
+¦       ConnectedPlayer.ts
+¦       messageHandler.ts
+¦       Room.ts
+¦       RoomManager.ts
+¦       startGame.ts
+¦       
++---node_modules
+¦   ¦   .package-lock.json
+¦   ¦   
+¦   +---.bin
+¦   ¦       acorn
+¦   ¦       acorn.cmd
+¦   ¦       acorn.ps1
+¦   ¦       ts-node
+¦   ¦       ts-node-cwd
+¦   ¦       ts-node-cwd.cmd
+¦   ¦       ts-node-cwd.ps1
+¦   ¦       ts-node-esm
+¦   ¦       ts-node-esm.cmd
+¦   ¦       ts-node-esm.ps1
+¦   ¦       ts-node-script
+¦   ¦       ts-node-script.cmd
+¦   ¦       ts-node-script.ps1
+¦   ¦       ts-node-transpile-only
+¦   ¦       ts-node-transpile-only.cmd
+¦   ¦       ts-node-transpile-only.ps1
+¦   ¦       ts-node.cmd
+¦   ¦       ts-node.ps1
+¦   ¦       ts-script
+¦   ¦       ts-script.cmd
+¦   ¦       ts-script.ps1
+¦   ¦       tsc
+¦   ¦       tsc.cmd
+¦   ¦       tsc.ps1
+¦   ¦       tsserver
+¦   ¦       tsserver.cmd
+¦   ¦       tsserver.ps1
+¦   ¦       uuid
+¦   ¦       uuid.cmd
+¦   ¦       uuid.ps1
+¦   ¦       
+¦   +---@cspotcode
+¦   ¦   L---source-map-support
+¦   ¦           browser-source-map-support.js
+¦   ¦           LICENSE.md
+¦   ¦           package.json
+¦   ¦           README.md
+¦   ¦           register-hook-require.d.ts
+¦   ¦           register-hook-require.js
+¦   ¦           register.d.ts
+¦   ¦           register.js
+¦   ¦           source-map-support.d.ts
+¦   ¦           source-map-support.js
+¦   ¦           
+¦   +---@jridgewell
+¦   ¦   +---resolve-uri
+¦   ¦   ¦   ¦   LICENSE
+¦   ¦   ¦   ¦   package.json
+¦   ¦   ¦   ¦   README.md
+¦   ¦   ¦   ¦   
+¦   ¦   ¦   L---dist
+¦   ¦   ¦       ¦   resolve-uri.mjs
+¦   ¦   ¦       ¦   resolve-uri.mjs.map
+¦   ¦   ¦       ¦   resolve-uri.umd.js
+¦   ¦   ¦       ¦   resolve-uri.umd.js.map
+¦   ¦   ¦       ¦   
+¦   ¦   ¦       L---types
+¦   ¦   ¦               resolve-uri.d.ts
+¦   ¦   ¦               
+¦   ¦   +---sourcemap-codec
+¦   ¦   ¦   ¦   LICENSE
+¦   ¦   ¦   ¦   package.json
+¦   ¦   ¦   ¦   README.md
+¦   ¦   ¦   ¦   
+¦   ¦   ¦   L---dist
+¦   ¦   ¦       ¦   sourcemap-codec.mjs
+¦   ¦   ¦       ¦   sourcemap-codec.mjs.map
+¦   ¦   ¦       ¦   sourcemap-codec.umd.js
+¦   ¦   ¦       ¦   sourcemap-codec.umd.js.map
+¦   ¦   ¦       ¦   
+¦   ¦   ¦       L---types
+¦   ¦   ¦               scopes.d.ts
+¦   ¦   ¦               sourcemap-codec.d.ts
+¦   ¦   ¦               strings.d.ts
+¦   ¦   ¦               vlq.d.ts
+¦   ¦   ¦               
+¦   ¦   L---trace-mapping
+¦   ¦       ¦   LICENSE
+¦   ¦       ¦   package.json
+¦   ¦       ¦   README.md
+¦   ¦       ¦   
+¦   ¦       L---dist
+¦   ¦           ¦   trace-mapping.mjs
+¦   ¦           ¦   trace-mapping.mjs.map
+¦   ¦           ¦   trace-mapping.umd.js
+¦   ¦           ¦   trace-mapping.umd.js.map
+¦   ¦           ¦   
+¦   ¦           L---types
+¦   ¦                   any-map.d.ts
+¦   ¦                   binary-search.d.ts
+¦   ¦                   by-source.d.ts
+¦   ¦                   resolve.d.ts
+¦   ¦                   sort.d.ts
+¦   ¦                   sourcemap-segment.d.ts
+¦   ¦                   strip-filename.d.ts
+¦   ¦                   trace-mapping.d.ts
+¦   ¦                   types.d.ts
+¦   ¦                   
+¦   +---@tsconfig
+¦   ¦   +---node10
+¦   ¦   ¦       LICENSE
+¦   ¦   ¦       package.json
+¦   ¦   ¦       README.md
+¦   ¦   ¦       tsconfig.json
+¦   ¦   ¦       
+¦   ¦   +---node12
+¦   ¦   ¦       LICENSE
+¦   ¦   ¦       package.json
+¦   ¦   ¦       README.md
+¦   ¦   ¦       tsconfig.json
+¦   ¦   ¦       
+¦   ¦   +---node14
+¦   ¦   ¦       LICENSE
+¦   ¦   ¦       package.json
+¦   ¦   ¦       README.md
+¦   ¦   ¦       tsconfig.json
+¦   ¦   ¦       
+¦   ¦   L---node16
+¦   ¦           LICENSE
+¦   ¦           package.json
+¦   ¦           README.md
+¦   ¦           tsconfig.json
+¦   ¦           
+¦   +---@types
+¦   ¦   +---node
+¦   ¦   ¦   ¦   assert.d.ts
+¦   ¦   ¦   ¦   async_hooks.d.ts
+¦   ¦   ¦   ¦   buffer.buffer.d.ts
+¦   ¦   ¦   ¦   buffer.d.ts
+¦   ¦   ¦   ¦   child_process.d.ts
+¦   ¦   ¦   ¦   cluster.d.ts
+¦   ¦   ¦   ¦   console.d.ts
+¦   ¦   ¦   ¦   constants.d.ts
+¦   ¦   ¦   ¦   crypto.d.ts
+¦   ¦   ¦   ¦   dgram.d.ts
+¦   ¦   ¦   ¦   diagnostics_channel.d.ts
+¦   ¦   ¦   ¦   dns.d.ts
+¦   ¦   ¦   ¦   dom-events.d.ts
+¦   ¦   ¦   ¦   domain.d.ts
+¦   ¦   ¦   ¦   events.d.ts
+¦   ¦   ¦   ¦   fs.d.ts
+¦   ¦   ¦   ¦   globals.d.ts
+¦   ¦   ¦   ¦   globals.typedarray.d.ts
+¦   ¦   ¦   ¦   http.d.ts
+¦   ¦   ¦   ¦   http2.d.ts
+¦   ¦   ¦   ¦   https.d.ts
+¦   ¦   ¦   ¦   index.d.ts
+¦   ¦   ¦   ¦   inspector.d.ts
+¦   ¦   ¦   ¦   LICENSE
+¦   ¦   ¦   ¦   module.d.ts
+¦   ¦   ¦   ¦   net.d.ts
+¦   ¦   ¦   ¦   os.d.ts
+¦   ¦   ¦   ¦   package.json
+¦   ¦   ¦   ¦   path.d.ts
+¦   ¦   ¦   ¦   perf_hooks.d.ts
+¦   ¦   ¦   ¦   process.d.ts
+¦   ¦   ¦   ¦   punycode.d.ts
+¦   ¦   ¦   ¦   querystring.d.ts
+¦   ¦   ¦   ¦   readline.d.ts
+¦   ¦   ¦   ¦   README.md
+¦   ¦   ¦   ¦   repl.d.ts
+¦   ¦   ¦   ¦   sea.d.ts
+¦   ¦   ¦   ¦   sqlite.d.ts
+¦   ¦   ¦   ¦   stream.d.ts
+¦   ¦   ¦   ¦   string_decoder.d.ts
+¦   ¦   ¦   ¦   test.d.ts
+¦   ¦   ¦   ¦   timers.d.ts
+¦   ¦   ¦   ¦   tls.d.ts
+¦   ¦   ¦   ¦   trace_events.d.ts
+¦   ¦   ¦   ¦   tty.d.ts
+¦   ¦   ¦   ¦   url.d.ts
+¦   ¦   ¦   ¦   util.d.ts
+¦   ¦   ¦   ¦   v8.d.ts
+¦   ¦   ¦   ¦   vm.d.ts
+¦   ¦   ¦   ¦   wasi.d.ts
+¦   ¦   ¦   ¦   worker_threads.d.ts
+¦   ¦   ¦   ¦   zlib.d.ts
+¦   ¦   ¦   ¦   
+¦   ¦   ¦   +---assert
+¦   ¦   ¦   ¦       strict.d.ts
+¦   ¦   ¦   ¦       
+¦   ¦   ¦   +---compatibility
+¦   ¦   ¦   ¦       disposable.d.ts
+¦   ¦   ¦   ¦       index.d.ts
+¦   ¦   ¦   ¦       indexable.d.ts
+¦   ¦   ¦   ¦       iterators.d.ts
+¦   ¦   ¦   ¦       
+¦   ¦   ¦   +---dns
+¦   ¦   ¦   ¦       promises.d.ts
+¦   ¦   ¦   ¦       
+¦   ¦   ¦   +---fs
+¦   ¦   ¦   ¦       promises.d.ts
+¦   ¦   ¦   ¦       
+¦   ¦   ¦   +---readline
+¦   ¦   ¦   ¦       promises.d.ts
+¦   ¦   ¦   ¦       
+¦   ¦   ¦   +---stream
+¦   ¦   ¦   ¦       consumers.d.ts
+¦   ¦   ¦   ¦       promises.d.ts
+¦   ¦   ¦   ¦       web.d.ts
+¦   ¦   ¦   ¦       
+¦   ¦   ¦   +---timers
+¦   ¦   ¦   ¦       promises.d.ts
+¦   ¦   ¦   ¦       
+¦   ¦   ¦   L---ts5.6
+¦   ¦   ¦           buffer.buffer.d.ts
+¦   ¦   ¦           globals.typedarray.d.ts
+¦   ¦   ¦           index.d.ts
+¦   ¦   ¦           
+¦   ¦   L---ws
+¦   ¦           index.d.mts
+¦   ¦           index.d.ts
+¦   ¦           LICENSE
+¦   ¦           package.json
+¦   ¦           README.md
+¦   ¦           
+¦   +---acorn
+¦   ¦   ¦   CHANGELOG.md
+¦   ¦   ¦   LICENSE
+¦   ¦   ¦   package.json
+¦   ¦   ¦   README.md
+¦   ¦   ¦   
+¦   ¦   +---bin
+¦   ¦   ¦       acorn
+¦   ¦   ¦       
+¦   ¦   L---dist
+¦   ¦           acorn.d.mts
+¦   ¦           acorn.d.ts
+¦   ¦           acorn.js
+¦   ¦           acorn.mjs
+¦   ¦           bin.js
+¦   ¦           
+¦   +---acorn-walk
+¦   ¦   ¦   CHANGELOG.md
+¦   ¦   ¦   LICENSE
+¦   ¦   ¦   package.json
+¦   ¦   ¦   README.md
+¦   ¦   ¦   
+¦   ¦   L---dist
+¦   ¦           walk.d.mts
+¦   ¦           walk.d.ts
+¦   ¦           walk.js
+¦   ¦           walk.mjs
+¦   ¦           
+¦   +---arg
+¦   ¦       index.d.ts
+¦   ¦       index.js
+¦   ¦       LICENSE.md
+¦   ¦       package.json
+¦   ¦       README.md
+¦   ¦       
+¦   +---create-require
+¦   ¦       CHANGELOG.md
+¦   ¦       create-require.d.ts
+¦   ¦       create-require.js
+¦   ¦       LICENSE
+¦   ¦       package.json
+¦   ¦       README.md
+¦   ¦       
+¦   +---diff
+¦   ¦   ¦   CONTRIBUTING.md
+¦   ¦   ¦   LICENSE
+¦   ¦   ¦   package.json
+¦   ¦   ¦   README.md
+¦   ¦   ¦   release-notes.md
+¦   ¦   ¦   runtime.js
+¦   ¦   ¦   
+¦   ¦   +---dist
+¦   ¦   ¦       diff.js
+¦   ¦   ¦       diff.min.js
+¦   ¦   ¦       
+¦   ¦   L---lib
+¦   ¦       ¦   index.es6.js
+¦   ¦       ¦   index.js
+¦   ¦       ¦   
+¦   ¦       +---convert
+¦   ¦       ¦       dmp.js
+¦   ¦       ¦       xml.js
+¦   ¦       ¦       
+¦   ¦       +---diff
+¦   ¦       ¦       array.js
+¦   ¦       ¦       base.js
+¦   ¦       ¦       character.js
+¦   ¦       ¦       css.js
+¦   ¦       ¦       json.js
+¦   ¦       ¦       line.js
+¦   ¦       ¦       sentence.js
+¦   ¦       ¦       word.js
+¦   ¦       ¦       
+¦   ¦       +---patch
+¦   ¦       ¦       apply.js
+¦   ¦       ¦       create.js
+¦   ¦       ¦       merge.js
+¦   ¦       ¦       parse.js
+¦   ¦       ¦       
+¦   ¦       L---util
+¦   ¦               array.js
+¦   ¦               distance-iterator.js
+¦   ¦               params.js
+¦   ¦               
+¦   +---make-error
+¦   ¦   ¦   index.d.ts
+¦   ¦   ¦   index.js
+¦   ¦   ¦   LICENSE
+¦   ¦   ¦   package.json
+¦   ¦   ¦   README.md
+¦   ¦   ¦   
+¦   ¦   L---dist
+¦   ¦           make-error.js
+¦   ¦           
+¦   +---ts-node
+¦   ¦   ¦   child-loader.mjs
+¦   ¦   ¦   esm.mjs
+¦   ¦   ¦   LICENSE
+¦   ¦   ¦   package.json
+¦   ¦   ¦   README.md
+¦   ¦   ¦   tsconfig.schema.json
+¦   ¦   ¦   tsconfig.schemastore-schema.json
+¦   ¦   ¦   
+¦   ¦   +---dist
+¦   ¦   ¦   ¦   bin-cwd.d.ts
+¦   ¦   ¦   ¦   bin-cwd.js
+¦   ¦   ¦   ¦   bin-cwd.js.map
+¦   ¦   ¦   ¦   bin-esm.d.ts
+¦   ¦   ¦   ¦   bin-esm.js
+¦   ¦   ¦   ¦   bin-esm.js.map
+¦   ¦   ¦   ¦   bin-script-deprecated.d.ts
+¦   ¦   ¦   ¦   bin-script-deprecated.js
+¦   ¦   ¦   ¦   bin-script-deprecated.js.map
+¦   ¦   ¦   ¦   bin-script.d.ts
+¦   ¦   ¦   ¦   bin-script.js
+¦   ¦   ¦   ¦   bin-script.js.map
+¦   ¦   ¦   ¦   bin-transpile.d.ts
+¦   ¦   ¦   ¦   bin-transpile.js
+¦   ¦   ¦   ¦   bin-transpile.js.map
+¦   ¦   ¦   ¦   bin.d.ts
+¦   ¦   ¦   ¦   bin.js
+¦   ¦   ¦   ¦   bin.js.map
+¦   ¦   ¦   ¦   cjs-resolve-hooks.d.ts
+¦   ¦   ¦   ¦   cjs-resolve-hooks.js
+¦   ¦   ¦   ¦   cjs-resolve-hooks.js.map
+¦   ¦   ¦   ¦   configuration.d.ts
+¦   ¦   ¦   ¦   configuration.js
+¦   ¦   ¦   ¦   configuration.js.map
+¦   ¦   ¦   ¦   esm.d.ts
+¦   ¦   ¦   ¦   esm.js
+¦   ¦   ¦   ¦   esm.js.map
+¦   ¦   ¦   ¦   file-extensions.d.ts
+¦   ¦   ¦   ¦   file-extensions.js
+¦   ¦   ¦   ¦   file-extensions.js.map
+¦   ¦   ¦   ¦   index.d.ts
+¦   ¦   ¦   ¦   index.js
+¦   ¦   ¦   ¦   index.js.map
+¦   ¦   ¦   ¦   module-type-classifier.d.ts
+¦   ¦   ¦   ¦   module-type-classifier.js
+¦   ¦   ¦   ¦   module-type-classifier.js.map
+¦   ¦   ¦   ¦   node-module-type-classifier.d.ts
+¦   ¦   ¦   ¦   node-module-type-classifier.js
+¦   ¦   ¦   ¦   node-module-type-classifier.js.map
+¦   ¦   ¦   ¦   repl.d.ts
+¦   ¦   ¦   ¦   repl.js
+¦   ¦   ¦   ¦   repl.js.map
+¦   ¦   ¦   ¦   resolver-functions.d.ts
+¦   ¦   ¦   ¦   resolver-functions.js
+¦   ¦   ¦   ¦   resolver-functions.js.map
+¦   ¦   ¦   ¦   ts-compiler-types.d.ts
+¦   ¦   ¦   ¦   ts-compiler-types.js
+¦   ¦   ¦   ¦   ts-compiler-types.js.map
+¦   ¦   ¦   ¦   ts-internals.d.ts
+¦   ¦   ¦   ¦   ts-internals.js
+¦   ¦   ¦   ¦   ts-internals.js.map
+¦   ¦   ¦   ¦   ts-transpile-module.d.ts
+¦   ¦   ¦   ¦   ts-transpile-module.js
+¦   ¦   ¦   ¦   ts-transpile-module.js.map
+¦   ¦   ¦   ¦   tsconfig-schema.d.ts
+¦   ¦   ¦   ¦   tsconfig-schema.js
+¦   ¦   ¦   ¦   tsconfig-schema.js.map
+¦   ¦   ¦   ¦   tsconfigs.d.ts
+¦   ¦   ¦   ¦   tsconfigs.js
+¦   ¦   ¦   ¦   tsconfigs.js.map
+¦   ¦   ¦   ¦   util.d.ts
+¦   ¦   ¦   ¦   util.js
+¦   ¦   ¦   ¦   util.js.map
+¦   ¦   ¦   ¦   
+¦   ¦   ¦   +---child
+¦   ¦   ¦   ¦       argv-payload.d.ts
+¦   ¦   ¦   ¦       argv-payload.js
+¦   ¦   ¦   ¦       argv-payload.js.map
+¦   ¦   ¦   ¦       child-entrypoint.d.ts
+¦   ¦   ¦   ¦       child-entrypoint.js
+¦   ¦   ¦   ¦       child-entrypoint.js.map
+¦   ¦   ¦   ¦       child-loader.d.ts
+¦   ¦   ¦   ¦       child-loader.js
+¦   ¦   ¦   ¦       child-loader.js.map
+¦   ¦   ¦   ¦       child-require.d.ts
+¦   ¦   ¦   ¦       child-require.js
+¦   ¦   ¦   ¦       child-require.js.map
+¦   ¦   ¦   ¦       spawn-child.d.ts
+¦   ¦   ¦   ¦       spawn-child.js
+¦   ¦   ¦   ¦       spawn-child.js.map
+¦   ¦   ¦   ¦       
+¦   ¦   ¦   L---transpilers
+¦   ¦   ¦           swc.d.ts
+¦   ¦   ¦           swc.js
+¦   ¦   ¦           swc.js.map
+¦   ¦   ¦           types.d.ts
+¦   ¦   ¦           types.js
+¦   ¦   ¦           types.js.map
+¦   ¦   ¦           
+¦   ¦   +---dist-raw
+¦   ¦   ¦       node-internal-constants.js
+¦   ¦   ¦       node-internal-errors.js
+¦   ¦   ¦       node-internal-modules-cjs-helpers.js
+¦   ¦   ¦       node-internal-modules-cjs-loader.js
+¦   ¦   ¦       node-internal-modules-esm-get_format.js
+¦   ¦   ¦       node-internal-modules-esm-resolve.js
+¦   ¦   ¦       node-internal-modules-package_json_reader.js
+¦   ¦   ¦       node-internal-repl-await.js
+¦   ¦   ¦       node-internalBinding-fs.js
+¦   ¦   ¦       NODE-LICENSE.md
+¦   ¦   ¦       node-nativemodule.js
+¦   ¦   ¦       node-options.js
+¦   ¦   ¦       node-primordials.js
+¦   ¦   ¦       README.md
+¦   ¦   ¦       runmain-hack.js
+¦   ¦   ¦       
+¦   ¦   +---esm
+¦   ¦   ¦       transpile-only.mjs
+¦   ¦   ¦       
+¦   ¦   +---node10
+¦   ¦   ¦       tsconfig.json
+¦   ¦   ¦       
+¦   ¦   +---node12
+¦   ¦   ¦       tsconfig.json
+¦   ¦   ¦       
+¦   ¦   +---node14
+¦   ¦   ¦       tsconfig.json
+¦   ¦   ¦       
+¦   ¦   +---node16
+¦   ¦   ¦       tsconfig.json
+¦   ¦   ¦       
+¦   ¦   +---register
+¦   ¦   ¦       files.js
+¦   ¦   ¦       index.js
+¦   ¦   ¦       transpile-only.js
+¦   ¦   ¦       type-check.js
+¦   ¦   ¦       
+¦   ¦   L---transpilers
+¦   ¦           swc-experimental.js
+¦   ¦           swc.js
+¦   ¦           
+¦   +---typescript
+¦   ¦   ¦   LICENSE.txt
+¦   ¦   ¦   package.json
+¦   ¦   ¦   README.md
+¦   ¦   ¦   SECURITY.md
+¦   ¦   ¦   ThirdPartyNoticeText.txt
+¦   ¦   ¦   
+¦   ¦   +---bin
+¦   ¦   ¦       tsc
+¦   ¦   ¦       tsserver
+¦   ¦   ¦       
+¦   ¦   L---lib
+¦   ¦       ¦   lib.d.ts
+¦   ¦       ¦   lib.decorators.d.ts
+¦   ¦       ¦   lib.decorators.legacy.d.ts
+¦   ¦       ¦   lib.dom.asynciterable.d.ts
+¦   ¦       ¦   lib.dom.d.ts
+¦   ¦       ¦   lib.dom.iterable.d.ts
+¦   ¦       ¦   lib.es2015.collection.d.ts
+¦   ¦       ¦   lib.es2015.core.d.ts
+¦   ¦       ¦   lib.es2015.d.ts
+¦   ¦       ¦   lib.es2015.generator.d.ts
+¦   ¦       ¦   lib.es2015.iterable.d.ts
+¦   ¦       ¦   lib.es2015.promise.d.ts
+¦   ¦       ¦   lib.es2015.proxy.d.ts
+¦   ¦       ¦   lib.es2015.reflect.d.ts
+¦   ¦       ¦   lib.es2015.symbol.d.ts
+¦   ¦       ¦   lib.es2015.symbol.wellknown.d.ts
+¦   ¦       ¦   lib.es2016.array.include.d.ts
+¦   ¦       ¦   lib.es2016.d.ts
+¦   ¦       ¦   lib.es2016.full.d.ts
+¦   ¦       ¦   lib.es2016.intl.d.ts
+¦   ¦       ¦   lib.es2017.arraybuffer.d.ts
+¦   ¦       ¦   lib.es2017.d.ts
+¦   ¦       ¦   lib.es2017.date.d.ts
+¦   ¦       ¦   lib.es2017.full.d.ts
+¦   ¦       ¦   lib.es2017.intl.d.ts
+¦   ¦       ¦   lib.es2017.object.d.ts
+¦   ¦       ¦   lib.es2017.sharedmemory.d.ts
+¦   ¦       ¦   lib.es2017.string.d.ts
+¦   ¦       ¦   lib.es2017.typedarrays.d.ts
+¦   ¦       ¦   lib.es2018.asyncgenerator.d.ts
+¦   ¦       ¦   lib.es2018.asynciterable.d.ts
+¦   ¦       ¦   lib.es2018.d.ts
+¦   ¦       ¦   lib.es2018.full.d.ts
+¦   ¦       ¦   lib.es2018.intl.d.ts
+¦   ¦       ¦   lib.es2018.promise.d.ts
+¦   ¦       ¦   lib.es2018.regexp.d.ts
+¦   ¦       ¦   lib.es2019.array.d.ts
+¦   ¦       ¦   lib.es2019.d.ts
+¦   ¦       ¦   lib.es2019.full.d.ts
+¦   ¦       ¦   lib.es2019.intl.d.ts
+¦   ¦       ¦   lib.es2019.object.d.ts
+¦   ¦       ¦   lib.es2019.string.d.ts
+¦   ¦       ¦   lib.es2019.symbol.d.ts
+¦   ¦       ¦   lib.es2020.bigint.d.ts
+¦   ¦       ¦   lib.es2020.d.ts
+¦   ¦       ¦   lib.es2020.date.d.ts
+¦   ¦       ¦   lib.es2020.full.d.ts
+¦   ¦       ¦   lib.es2020.intl.d.ts
+¦   ¦       ¦   lib.es2020.number.d.ts
+¦   ¦       ¦   lib.es2020.promise.d.ts
+¦   ¦       ¦   lib.es2020.sharedmemory.d.ts
+¦   ¦       ¦   lib.es2020.string.d.ts
+¦   ¦       ¦   lib.es2020.symbol.wellknown.d.ts
+¦   ¦       ¦   lib.es2021.d.ts
+¦   ¦       ¦   lib.es2021.full.d.ts
+¦   ¦       ¦   lib.es2021.intl.d.ts
+¦   ¦       ¦   lib.es2021.promise.d.ts
+¦   ¦       ¦   lib.es2021.string.d.ts
+¦   ¦       ¦   lib.es2021.weakref.d.ts
+¦   ¦       ¦   lib.es2022.array.d.ts
+¦   ¦       ¦   lib.es2022.d.ts
+¦   ¦       ¦   lib.es2022.error.d.ts
+¦   ¦       ¦   lib.es2022.full.d.ts
+¦   ¦       ¦   lib.es2022.intl.d.ts
+¦   ¦       ¦   lib.es2022.object.d.ts
+¦   ¦       ¦   lib.es2022.regexp.d.ts
+¦   ¦       ¦   lib.es2022.string.d.ts
+¦   ¦       ¦   lib.es2023.array.d.ts
+¦   ¦       ¦   lib.es2023.collection.d.ts
+¦   ¦       ¦   lib.es2023.d.ts
+¦   ¦       ¦   lib.es2023.full.d.ts
+¦   ¦       ¦   lib.es2023.intl.d.ts
+¦   ¦       ¦   lib.es2024.arraybuffer.d.ts
+¦   ¦       ¦   lib.es2024.collection.d.ts
+¦   ¦       ¦   lib.es2024.d.ts
+¦   ¦       ¦   lib.es2024.full.d.ts
+¦   ¦       ¦   lib.es2024.object.d.ts
+¦   ¦       ¦   lib.es2024.promise.d.ts
+¦   ¦       ¦   lib.es2024.regexp.d.ts
+¦   ¦       ¦   lib.es2024.sharedmemory.d.ts
+¦   ¦       ¦   lib.es2024.string.d.ts
+¦   ¦       ¦   lib.es5.d.ts
+¦   ¦       ¦   lib.es6.d.ts
+¦   ¦       ¦   lib.esnext.array.d.ts
+¦   ¦       ¦   lib.esnext.collection.d.ts
+¦   ¦       ¦   lib.esnext.d.ts
+¦   ¦       ¦   lib.esnext.decorators.d.ts
+¦   ¦       ¦   lib.esnext.disposable.d.ts
+¦   ¦       ¦   lib.esnext.float16.d.ts
+¦   ¦       ¦   lib.esnext.full.d.ts
+¦   ¦       ¦   lib.esnext.intl.d.ts
+¦   ¦       ¦   lib.esnext.iterator.d.ts
+¦   ¦       ¦   lib.esnext.promise.d.ts
+¦   ¦       ¦   lib.scripthost.d.ts
+¦   ¦       ¦   lib.webworker.asynciterable.d.ts
+¦   ¦       ¦   lib.webworker.d.ts
+¦   ¦       ¦   lib.webworker.importscripts.d.ts
+¦   ¦       ¦   lib.webworker.iterable.d.ts
+¦   ¦       ¦   tsc.js
+¦   ¦       ¦   tsserver.js
+¦   ¦       ¦   tsserverlibrary.d.ts
+¦   ¦       ¦   tsserverlibrary.js
+¦   ¦       ¦   typescript.d.ts
+¦   ¦       ¦   typescript.js
+¦   ¦       ¦   typesMap.json
+¦   ¦       ¦   typingsInstaller.js
+¦   ¦       ¦   watchGuard.js
+¦   ¦       ¦   _tsc.js
+¦   ¦       ¦   _tsserver.js
+¦   ¦       ¦   _typingsInstaller.js
+¦   ¦       ¦   
+¦   ¦       +---cs
+¦   ¦       ¦       diagnosticMessages.generated.json
+¦   ¦       ¦       
+¦   ¦       +---de
+¦   ¦       ¦       diagnosticMessages.generated.json
+¦   ¦       ¦       
+¦   ¦       +---es
+¦   ¦       ¦       diagnosticMessages.generated.json
+¦   ¦       ¦       
+¦   ¦       +---fr
+¦   ¦       ¦       diagnosticMessages.generated.json
+¦   ¦       ¦       
+¦   ¦       +---it
+¦   ¦       ¦       diagnosticMessages.generated.json
+¦   ¦       ¦       
+¦   ¦       +---ja
+¦   ¦       ¦       diagnosticMessages.generated.json
+¦   ¦       ¦       
+¦   ¦       +---ko
+¦   ¦       ¦       diagnosticMessages.generated.json
+¦   ¦       ¦       
+¦   ¦       +---pl
+¦   ¦       ¦       diagnosticMessages.generated.json
+¦   ¦       ¦       
+¦   ¦       +---pt-br
+¦   ¦       ¦       diagnosticMessages.generated.json
+¦   ¦       ¦       
+¦   ¦       +---ru
+¦   ¦       ¦       diagnosticMessages.generated.json
+¦   ¦       ¦       
+¦   ¦       +---tr
+¦   ¦       ¦       diagnosticMessages.generated.json
+¦   ¦       ¦       
+¦   ¦       +---zh-cn
+¦   ¦       ¦       diagnosticMessages.generated.json
+¦   ¦       ¦       
+¦   ¦       L---zh-tw
+¦   ¦               diagnosticMessages.generated.json
+¦   ¦               
+¦   +---undici-types
+¦   ¦       agent.d.ts
+¦   ¦       api.d.ts
+¦   ¦       balanced-pool.d.ts
+¦   ¦       cache.d.ts
+¦   ¦       client.d.ts
+¦   ¦       connector.d.ts
+¦   ¦       content-type.d.ts
+¦   ¦       cookies.d.ts
+¦   ¦       diagnostics-channel.d.ts
+¦   ¦       dispatcher.d.ts
+¦   ¦       env-http-proxy-agent.d.ts
+¦   ¦       errors.d.ts
+¦   ¦       eventsource.d.ts
+¦   ¦       fetch.d.ts
+¦   ¦       file.d.ts
+¦   ¦       filereader.d.ts
+¦   ¦       formdata.d.ts
+¦   ¦       global-dispatcher.d.ts
+¦   ¦       global-origin.d.ts
+¦   ¦       handlers.d.ts
+¦   ¦       header.d.ts
+¦   ¦       index.d.ts
+¦   ¦       interceptors.d.ts
+¦   ¦       LICENSE
+¦   ¦       mock-agent.d.ts
+¦   ¦       mock-client.d.ts
+¦   ¦       mock-errors.d.ts
+¦   ¦       mock-interceptor.d.ts
+¦   ¦       mock-pool.d.ts
+¦   ¦       package.json
+¦   ¦       patch.d.ts
+¦   ¦       pool-stats.d.ts
+¦   ¦       pool.d.ts
+¦   ¦       proxy-agent.d.ts
+¦   ¦       readable.d.ts
+¦   ¦       README.md
+¦   ¦       retry-agent.d.ts
+¦   ¦       retry-handler.d.ts
+¦   ¦       util.d.ts
+¦   ¦       webidl.d.ts
+¦   ¦       websocket.d.ts
+¦   ¦       
+¦   +---uuid
+¦   ¦   ¦   LICENSE.md
+¦   ¦   ¦   package.json
+¦   ¦   ¦   README.md
+¦   ¦   ¦   
+¦   ¦   L---dist
+¦   ¦       +---cjs
+¦   ¦       ¦       index.d.ts
+¦   ¦       ¦       index.js
+¦   ¦       ¦       max.d.ts
+¦   ¦       ¦       max.js
+¦   ¦       ¦       md5.d.ts
+¦   ¦       ¦       md5.js
+¦   ¦       ¦       native.d.ts
+¦   ¦       ¦       native.js
+¦   ¦       ¦       nil.d.ts
+¦   ¦       ¦       nil.js
+¦   ¦       ¦       package.json
+¦   ¦       ¦       parse.d.ts
+¦   ¦       ¦       parse.js
+¦   ¦       ¦       regex.d.ts
+¦   ¦       ¦       regex.js
+¦   ¦       ¦       rng.d.ts
+¦   ¦       ¦       rng.js
+¦   ¦       ¦       sha1.d.ts
+¦   ¦       ¦       sha1.js
+¦   ¦       ¦       stringify.d.ts
+¦   ¦       ¦       stringify.js
+¦   ¦       ¦       types.d.ts
+¦   ¦       ¦       types.js
+¦   ¦       ¦       uuid-bin.d.ts
+¦   ¦       ¦       uuid-bin.js
+¦   ¦       ¦       v1.d.ts
+¦   ¦       ¦       v1.js
+¦   ¦       ¦       v1ToV6.d.ts
+¦   ¦       ¦       v1ToV6.js
+¦   ¦       ¦       v3.d.ts
+¦   ¦       ¦       v3.js
+¦   ¦       ¦       v35.d.ts
+¦   ¦       ¦       v35.js
+¦   ¦       ¦       v4.d.ts
+¦   ¦       ¦       v4.js
+¦   ¦       ¦       v5.d.ts
+¦   ¦       ¦       v5.js
+¦   ¦       ¦       v6.d.ts
+¦   ¦       ¦       v6.js
+¦   ¦       ¦       v6ToV1.d.ts
+¦   ¦       ¦       v6ToV1.js
+¦   ¦       ¦       v7.d.ts
+¦   ¦       ¦       v7.js
+¦   ¦       ¦       validate.d.ts
+¦   ¦       ¦       validate.js
+¦   ¦       ¦       version.d.ts
+¦   ¦       ¦       version.js
+¦   ¦       ¦       
+¦   ¦       +---cjs-browser
+¦   ¦       ¦       index.d.ts
+¦   ¦       ¦       index.js
+¦   ¦       ¦       max.d.ts
+¦   ¦       ¦       max.js
+¦   ¦       ¦       md5.d.ts
+¦   ¦       ¦       md5.js
+¦   ¦       ¦       native.d.ts
+¦   ¦       ¦       native.js
+¦   ¦       ¦       nil.d.ts
+¦   ¦       ¦       nil.js
+¦   ¦       ¦       package.json
+¦   ¦       ¦       parse.d.ts
+¦   ¦       ¦       parse.js
+¦   ¦       ¦       regex.d.ts
+¦   ¦       ¦       regex.js
+¦   ¦       ¦       rng.d.ts
+¦   ¦       ¦       rng.js
+¦   ¦       ¦       sha1.d.ts
+¦   ¦       ¦       sha1.js
+¦   ¦       ¦       stringify.d.ts
+¦   ¦       ¦       stringify.js
+¦   ¦       ¦       types.d.ts
+¦   ¦       ¦       types.js
+¦   ¦       ¦       uuid-bin.d.ts
+¦   ¦       ¦       uuid-bin.js
+¦   ¦       ¦       v1.d.ts
+¦   ¦       ¦       v1.js
+¦   ¦       ¦       v1ToV6.d.ts
+¦   ¦       ¦       v1ToV6.js
+¦   ¦       ¦       v3.d.ts
+¦   ¦       ¦       v3.js
+¦   ¦       ¦       v35.d.ts
+¦   ¦       ¦       v35.js
+¦   ¦       ¦       v4.d.ts
+¦   ¦       ¦       v4.js
+¦   ¦       ¦       v5.d.ts
+¦   ¦       ¦       v5.js
+¦   ¦       ¦       v6.d.ts
+¦   ¦       ¦       v6.js
+¦   ¦       ¦       v6ToV1.d.ts
+¦   ¦       ¦       v6ToV1.js
+¦   ¦       ¦       v7.d.ts
+¦   ¦       ¦       v7.js
+¦   ¦       ¦       validate.d.ts
+¦   ¦       ¦       validate.js
+¦   ¦       ¦       version.d.ts
+¦   ¦       ¦       version.js
+¦   ¦       ¦       
+¦   ¦       +---esm
+¦   ¦       ¦   ¦   index.d.ts
+¦   ¦       ¦   ¦   index.js
+¦   ¦       ¦   ¦   max.d.ts
+¦   ¦       ¦   ¦   max.js
+¦   ¦       ¦   ¦   md5.d.ts
+¦   ¦       ¦   ¦   md5.js
+¦   ¦       ¦   ¦   native.d.ts
+¦   ¦       ¦   ¦   native.js
+¦   ¦       ¦   ¦   nil.d.ts
+¦   ¦       ¦   ¦   nil.js
+¦   ¦       ¦   ¦   parse.d.ts
+¦   ¦       ¦   ¦   parse.js
+¦   ¦       ¦   ¦   regex.d.ts
+¦   ¦       ¦   ¦   regex.js
+¦   ¦       ¦   ¦   rng.d.ts
+¦   ¦       ¦   ¦   rng.js
+¦   ¦       ¦   ¦   sha1.d.ts
+¦   ¦       ¦   ¦   sha1.js
+¦   ¦       ¦   ¦   stringify.d.ts
+¦   ¦       ¦   ¦   stringify.js
+¦   ¦       ¦   ¦   types.d.ts
+¦   ¦       ¦   ¦   types.js
+¦   ¦       ¦   ¦   uuid-bin.d.ts
+¦   ¦       ¦   ¦   uuid-bin.js
+¦   ¦       ¦   ¦   v1.d.ts
+¦   ¦       ¦   ¦   v1.js
+¦   ¦       ¦   ¦   v1ToV6.d.ts
+¦   ¦       ¦   ¦   v1ToV6.js
+¦   ¦       ¦   ¦   v3.d.ts
+¦   ¦       ¦   ¦   v3.js
+¦   ¦       ¦   ¦   v35.d.ts
+¦   ¦       ¦   ¦   v35.js
+¦   ¦       ¦   ¦   v4.d.ts
+¦   ¦       ¦   ¦   v4.js
+¦   ¦       ¦   ¦   v5.d.ts
+¦   ¦       ¦   ¦   v5.js
+¦   ¦       ¦   ¦   v6.d.ts
+¦   ¦       ¦   ¦   v6.js
+¦   ¦       ¦   ¦   v6ToV1.d.ts
+¦   ¦       ¦   ¦   v6ToV1.js
+¦   ¦       ¦   ¦   v7.d.ts
+¦   ¦       ¦   ¦   v7.js
+¦   ¦       ¦   ¦   validate.d.ts
+¦   ¦       ¦   ¦   validate.js
+¦   ¦       ¦   ¦   version.d.ts
+¦   ¦       ¦   ¦   version.js
+¦   ¦       ¦   ¦   
+¦   ¦       ¦   L---bin
+¦   ¦       ¦           uuid
+¦   ¦       ¦           
+¦   ¦       L---esm-browser
+¦   ¦               index.d.ts
+¦   ¦               index.js
+¦   ¦               max.d.ts
+¦   ¦               max.js
+¦   ¦               md5.d.ts
+¦   ¦               md5.js
+¦   ¦               native.d.ts
+¦   ¦               native.js
+¦   ¦               nil.d.ts
+¦   ¦               nil.js
+¦   ¦               parse.d.ts
+¦   ¦               parse.js
+¦   ¦               regex.d.ts
+¦   ¦               regex.js
+¦   ¦               rng.d.ts
+¦   ¦               rng.js
+¦   ¦               sha1.d.ts
+¦   ¦               sha1.js
+¦   ¦               stringify.d.ts
+¦   ¦               stringify.js
+¦   ¦               types.d.ts
+¦   ¦               types.js
+¦   ¦               uuid-bin.d.ts
+¦   ¦               uuid-bin.js
+¦   ¦               v1.d.ts
+¦   ¦               v1.js
+¦   ¦               v1ToV6.d.ts
+¦   ¦               v1ToV6.js
+¦   ¦               v3.d.ts
+¦   ¦               v3.js
+¦   ¦               v35.d.ts
+¦   ¦               v35.js
+¦   ¦               v4.d.ts
+¦   ¦               v4.js
+¦   ¦               v5.d.ts
+¦   ¦               v5.js
+¦   ¦               v6.d.ts
+¦   ¦               v6.js
+¦   ¦               v6ToV1.d.ts
+¦   ¦               v6ToV1.js
+¦   ¦               v7.d.ts
+¦   ¦               v7.js
+¦   ¦               validate.d.ts
+¦   ¦               validate.js
+¦   ¦               version.d.ts
+¦   ¦               version.js
+¦   ¦               
+¦   +---v8-compile-cache-lib
+¦   ¦       CHANGELOG.md
+¦   ¦       LICENSE
+¦   ¦       package.json
+¦   ¦       README.md
+¦   ¦       v8-compile-cache.d.ts
+¦   ¦       v8-compile-cache.js
+¦   ¦       
+¦   +---ws
+¦   ¦   ¦   browser.js
+¦   ¦   ¦   index.js
+¦   ¦   ¦   LICENSE
+¦   ¦   ¦   package.json
+¦   ¦   ¦   README.md
+¦   ¦   ¦   wrapper.mjs
+¦   ¦   ¦   
+¦   ¦   L---lib
+¦   ¦           buffer-util.js
+¦   ¦           constants.js
+¦   ¦           event-target.js
+¦   ¦           extension.js
+¦   ¦           limiter.js
+¦   ¦           permessage-deflate.js
+¦   ¦           receiver.js
+¦   ¦           sender.js
+¦   ¦           stream.js
+¦   ¦           subprotocol.js
+¦   ¦           validation.js
+¦   ¦           websocket-server.js
+¦   ¦           websocket.js
+¦   ¦           
+¦   L---yn
+¦           index.d.ts
+¦           index.js
+¦           lenient.js
+¦           license
+¦           package.json
+¦           readme.md
+¦           
+L---types
+        GameState.ts
+        Player.ts
+        Room.ts
+        Rules.ts
+        
