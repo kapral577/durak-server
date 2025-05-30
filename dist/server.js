@@ -3,22 +3,53 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-// server.ts - СЕРВЕР - ИСПРАВЛЕНО
+// server.ts - ПОЛНЫЙ КОД С HTTP АУТЕНТИФИКАЦИЕЙ ДЛЯ TELEGRAM MINI APPS
 const ws_1 = __importDefault(require("ws"));
+const http_1 = __importDefault(require("http"));
 const RoomManager_1 = require("./logic/RoomManager");
 class DurakGameServer {
     constructor() {
         this.authenticatedClients = new Map();
         this.port = parseInt(process.env.PORT || '3001');
+        // ✅ HTTP СЕРВЕР С ПОДДЕРЖКОЙ АУТЕНТИФИКАЦИИ
+        this.server = http_1.default.createServer((req, res) => {
+            // ✅ CORS заголовки для всех запросов
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Telegram-Init-Data');
+            // ✅ Обработка preflight OPTIONS запросов
+            if (req.method === 'OPTIONS') {
+                res.writeHead(200);
+                res.end();
+                return;
+            }
+            // ✅ ОБРАБОТКА POST /auth/telegram (ДОБАВЛЕНО!)
+            if (req.method === 'POST' && req.url === '/auth/telegram') {
+                this.handleTelegramAuthHTTP(req, res);
+                return;
+            }
+            // Обычный статус сервера
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                status: 'Durak Game Server is running',
+                timestamp: new Date().toISOString(),
+                connectedClients: this.authenticatedClients.size
+            }));
+        });
+        // ✅ ПРИВЯЗЫВАЕМ WebSocket К HTTP СЕРВЕРУ
         this.wss = new ws_1.default.Server({
-            port: this.port,
+            server: this.server,
             verifyClient: (info) => {
                 const allowedOrigins = [
                     process.env.FRONTEND_URL,
-                    'https://your-app.vercel.app',
+                    'https://durakapp.vercel.app',
+                    'https://durakapp-nyph.vercel.app',
+                    'https://web.telegram.org',
+                    'https://telegram.org',
                     'localhost:3000'
                 ].filter(Boolean);
                 const origin = info.origin;
+                console.log('🔍 WebSocket connection from origin:', origin);
                 if (!origin)
                     return true;
                 return allowedOrigins.some(allowed => allowed && origin.includes(allowed.replace('https://', '')));
@@ -30,6 +61,76 @@ class DurakGameServer {
         console.log(`📱 Frontend URL: ${process.env.FRONTEND_URL || 'Not set'}`);
         console.log(`🤖 Bot Token: ${process.env.TELEGRAM_BOT_TOKEN ? '✅ Set' : '❌ Missing'}`);
     }
+    // ✅ НОВЫЙ МЕТОД - HTTP АУТЕНТИФИКАЦИЯ ДЛЯ TELEGRAM MINI APPS
+    handleTelegramAuthHTTP(req, res) {
+        console.log('🔐 HTTP Telegram authentication attempt');
+        let body = '';
+        req.on('data', (chunk) => {
+            body += chunk.toString();
+        });
+        req.on('end', () => {
+            try {
+                const { initData, user } = JSON.parse(body);
+                console.log('📄 Received auth data:', { userExists: !!user, initDataLength: initData?.length || 0 });
+                // В development режиме принимаем тестовых пользователей
+                if (process.env.NODE_ENV === 'development' && user?.id < 1000000) {
+                    console.log('🧪 Development mode: accepting test user via HTTP');
+                    const authToken = `http_token_${user.id}_${Date.now()}`;
+                    const player = {
+                        id: `tg_${user.id}`,
+                        name: user.first_name + (user.last_name ? ` ${user.last_name}` : ''),
+                        telegramId: user.id,
+                        username: user.username,
+                        avatar: user.photo_url,
+                        isReady: false
+                    };
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        success: true,
+                        token: authToken,
+                        player: player
+                    }));
+                    console.log(`✅ HTTP Auth successful: ${user.first_name} (${user.id})`);
+                    return;
+                }
+                // В production здесь должна быть валидация initData
+                if (!user) {
+                    console.log('❌ No user data provided');
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        success: false,
+                        error: 'Invalid user data'
+                    }));
+                    return;
+                }
+                // Принимаем пользователя (в production добавить валидацию initData)
+                const authToken = `http_token_${user.id}_${Date.now()}`;
+                const player = {
+                    id: `tg_${user.id}`,
+                    name: user.first_name + (user.last_name ? ` ${user.last_name}` : ''),
+                    telegramId: user.id,
+                    username: user.username,
+                    avatar: user.photo_url,
+                    isReady: false
+                };
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: true,
+                    token: authToken,
+                    player: player
+                }));
+                console.log(`✅ HTTP Auth successful: ${user.first_name} (${user.id})`);
+            }
+            catch (error) {
+                console.error('❌ HTTP Auth error:', error);
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: false,
+                    error: 'Internal server error'
+                }));
+            }
+        });
+    }
     setupServer() {
         this.wss.on('connection', this.handleConnection.bind(this));
         // Heartbeat для поддержания соединений
@@ -40,14 +141,18 @@ class DurakGameServer {
                 }
             });
         }, 30000);
+        // ✅ ЗАПУСКАЕМ HTTP СЕРВЕР
+        this.server.listen(this.port, () => {
+            console.log(`✅ HTTP + WebSocket server listening on port ${this.port}`);
+        });
         // Graceful shutdown
         process.on('SIGTERM', this.shutdown.bind(this));
         process.on('SIGINT', this.shutdown.bind(this));
     }
     handleConnection(socket) {
-        console.log('🔌 New connection attempt');
+        console.log('🔌 New WebSocket connection attempt');
         const authTimeout = setTimeout(() => {
-            console.log('⏰ Authentication timeout');
+            console.log('⏰ WebSocket authentication timeout');
             socket.close(4001, 'Authentication timeout');
         }, 10000);
         socket.on('message', (data) => {
@@ -70,7 +175,7 @@ class DurakGameServer {
                 }
             }
             catch (error) {
-                console.error('❌ Message parsing error:', error);
+                console.error('❌ WebSocket message parsing error:', error);
                 socket.send(JSON.stringify({
                     type: 'error',
                     message: 'Invalid message format'
@@ -80,7 +185,7 @@ class DurakGameServer {
         socket.on('close', (code, reason) => {
             clearTimeout(authTimeout);
             this.handleDisconnection(socket);
-            console.log(`🔌 Connection closed: ${code} ${reason.toString()}`);
+            console.log(`🔌 WebSocket connection closed: ${code} ${reason.toString()}`);
         });
         socket.on('error', (error) => {
             console.error('❌ WebSocket error:', error);
@@ -90,10 +195,10 @@ class DurakGameServer {
         });
     }
     handleAuthentication(socket, message) {
-        console.log('🔐 Authentication attempt');
+        console.log('🔐 WebSocket authentication attempt');
         // В development режиме принимаем тестовых пользователей
         if (process.env.NODE_ENV === 'development' && message.telegramUser?.id < 1000000) {
-            console.log('🧪 Development mode: accepting test user');
+            console.log('🧪 Development mode: accepting test user via WebSocket');
             this.createAuthenticatedClient(socket, message.telegramUser, 'dev_token');
             return;
         }
@@ -109,7 +214,7 @@ class DurakGameServer {
             return;
         }
         // В реальном проекте здесь должна быть валидация initData
-        const authToken = `token_${telegramUser.id}_${Date.now()}`;
+        const authToken = `ws_token_${telegramUser.id}_${Date.now()}`;
         this.createAuthenticatedClient(socket, telegramUser, authToken);
     }
     createAuthenticatedClient(socket, telegramUser, authToken) {
@@ -133,7 +238,7 @@ class DurakGameServer {
             },
             token: authToken
         }));
-        console.log(`✅ User authenticated: ${telegramUser.first_name} (${telegramUser.id})`);
+        console.log(`✅ WebSocket user authenticated: ${telegramUser.first_name} (${telegramUser.id})`);
         // Отправляем список комнат после аутентификации
         this.roomManager.sendRoomsList(socket);
     }
@@ -156,8 +261,10 @@ class DurakGameServer {
     shutdown() {
         console.log('🛑 Shutting down server...');
         this.wss.close(() => {
-            console.log('✅ Server shut down gracefully');
-            process.exit(0);
+            this.server.close(() => {
+                console.log('✅ Server shut down gracefully');
+                process.exit(0);
+            });
         });
     }
     // Метод для получения статистики сервера

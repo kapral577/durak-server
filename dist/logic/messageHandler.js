@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.messageHandler = messageHandler;
-const RoomManager_1 = require("./RoomManager"); // ✅ ИСПРАВЛЕН импорт
 function messageHandler(socket, message) {
     try {
         const data = JSON.parse(message);
@@ -26,7 +25,7 @@ function messageHandler(socket, message) {
                     return;
                 }
                 // Создаем комнату через RoomManager
-                RoomManager_1.roomManager.createRoom(name, rules, rules.maxPlayers, socket, data.playerId);
+                roomManager.createRoom(name, rules, rules.maxPlayers, socket, data.playerId);
                 break;
             }
             case 'join_room': {
@@ -38,11 +37,11 @@ function messageHandler(socket, message) {
                     }));
                     return;
                 }
-                RoomManager_1.roomManager.joinRoom(roomId, socket, data.playerId);
+                roomManager.joinRoom(roomId, socket, data.playerId);
                 break;
             }
             case 'leave_room': {
-                RoomManager_1.roomManager.leaveRoom(socket, data.playerId);
+                roomManager.leaveRoom(socket, data.playerId);
                 break;
             }
             /* ────────── Готовность игрока ────────── */
@@ -55,7 +54,7 @@ function messageHandler(socket, message) {
                     }));
                     return;
                 }
-                RoomManager_1.roomManager.setReady(roomId, data.playerId);
+                roomManager.setReady(roomId, data.playerId);
                 break;
             }
             /* ────────── Старт игры ────────── */
@@ -69,12 +68,12 @@ function messageHandler(socket, message) {
                     return;
                 }
                 // Принудительный старт игры (для хоста)
-                const room = RoomManager_1.roomManager.getRoom(roomId);
+                const room = roomManager.getRoom(roomId);
                 if (room) {
                     // Проверяем, что запрос от первого игрока (хоста)
                     const players = room.getPlayers();
                     if (players.length > 0 && players[0].id === data.playerId) {
-                        RoomManager_1.roomManager.handleMessage(socket, data);
+                        roomManager.handleMessage(socket, data);
                     }
                     else {
                         socket.send(JSON.stringify({
@@ -95,12 +94,12 @@ function messageHandler(socket, message) {
                     }));
                     return;
                 }
-                RoomManager_1.roomManager.handleGameAction(roomId, data.playerId, action);
+                roomManager.handleGameAction(roomId, data.playerId, action);
                 break;
             }
             /* ────────── Список комнат ────────── */
             case 'get_rooms': {
-                const rooms = RoomManager_1.roomManager.getRooms();
+                const rooms = roomManager.getRooms();
                 socket.send(JSON.stringify({
                     type: 'rooms_list',
                     rooms
@@ -117,7 +116,7 @@ function messageHandler(socket, message) {
             }
             /* ────────── Статистика (для отладки) ────────── */
             case 'get_stats': {
-                const stats = RoomManager_1.roomManager.getStats();
+                const stats = roomManager.getStats();
                 socket.send(JSON.stringify({
                     type: 'server_stats',
                     stats

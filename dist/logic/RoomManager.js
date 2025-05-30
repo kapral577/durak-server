@@ -1,263 +1,275 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.roomManager = exports.RoomManager = void 0;
-const Room_1 = require("./Room");
-const startGame_1 = require("./startGame");
+exports.RoomManager = void 0;
+// logic/RoomManager.ts - ИСПРАВЛЕНА ПРОБЛЕМА С ДУБЛИРОВАНИЕМ ПАРАМЕТРОВ
 const uuid_1 = require("uuid");
+const ws_1 = __importDefault(require("ws"));
+class Room {
+    constructor(id, name, rules, maxPlayers, hostId) {
+        this.players = new Map();
+        this.status = 'waiting';
+        this.id = id;
+        this.name = name;
+        this.rules = rules;
+        this.maxPlayers = maxPlayers;
+        this.createdAt = new Date();
+        this.hostId = hostId;
+    }
+    addPlayer(player) {
+        if (this.players.size >= this.maxPlayers) {
+            return false;
+        }
+        this.players.set(player.id, player);
+        return true;
+    }
+    removePlayer(playerId) {
+        this.players.delete(playerId);
+    }
+    getInfo() {
+        return {
+            id: this.id,
+            name: this.name,
+            players: Array.from(this.players.values()),
+            maxPlayers: this.maxPlayers,
+            rules: this.rules,
+            status: this.status,
+            createdAt: this.createdAt,
+            hostId: this.hostId
+        };
+    }
+}
 class RoomManager {
     constructor() {
-        this.rooms = new Map(); // ✅ ИСПРАВЛЕНО: добавлен тип
+        this.rooms = new Map();
+        this.playerRooms = new Map(); // playerId -> roomId
+        this.socketPlayerMap = new Map(); // socket -> playerId
     }
-    /* ───────────── CRUD комнат ───────────── */
-    createRoom(name, rules, maxPlayers, socket, playerId) {
-        const roomId = (0, uuid_1.v4)();
-        if (this.rooms.has(roomId)) {
-            console.warn(`⚠️ Room ${roomId} already exists`);
-            return roomId;
-        }
-        // ✅ ИСПРАВЛЕНО: добавлен 4-й параметр maxPlayers
-        const room = new Room_1.Room(roomId, name, rules, maxPlayers);
-        this.rooms.set(roomId, room);
-        // Добавляем создателя комнаты
-        room.addPlayer(socket, playerId);
-        console.log(`✅ Room ${roomId} created by ${playerId}`);
-        // Отправляем информацию о созданной комнате
-        socket.send(JSON.stringify({
-            type: 'room_created',
-            room: room.toPublicInfo()
-        }));
-        this.broadcastRooms();
-        return roomId;
-    }
-    joinRoom(roomId, socket, playerId) {
-        const room = this.rooms.get(roomId);
-        if (!room) {
-            socket.send(JSON.stringify({
-                type: 'error',
-                message: `Room ${roomId} not found`
-            }));
-            return false;
-        }
-        if (room.isFull()) {
-            socket.send(JSON.stringify({
-                type: 'error',
-                message: `Room ${roomId} is full`
-            }));
-            return false;
-        }
-        const success = room.addPlayer(socket, playerId);
-        if (success) {
-            // Уведомляем о успешном присоединении
-            socket.send(JSON.stringify({
-                type: 'room_joined',
-                room: room.toPublicInfo(),
-                player: room.getPlayer(playerId)
-            }));
-            // Уведомляем других игроков
-            room.broadcast(JSON.stringify({
-                type: 'player_joined',
-                player: room.getPlayer(playerId),
-                room: room.toPublicInfo()
-            }), socket);
-            this.broadcastRooms();
-        }
-        return success;
-    }
-    leaveRoom(socket, playerId) {
-        for (const room of this.rooms.values()) {
-            if (room.removePlayer(socket, playerId)) {
-                // Уведомляем оставшихся игроков
-                room.broadcast(JSON.stringify({
-                    type: 'player_left',
-                    playerId: playerId,
-                    room: room.toPublicInfo()
-                }));
-                // Удаляем пустую комнату
-                if (!room.hasPlayers()) {
-                    this.rooms.delete(room.id);
-                    console.log(`🗑️ Empty room ${room.id} deleted`);
-                }
-                this.broadcastRooms();
-                break;
-            }
-        }
-        // Уведомляем игрока о выходе
-        socket.send(JSON.stringify({
-            type: 'room_left',
-            roomId: playerId
-        }));
-    }
-    /* ───────────── Готовность / запуск игры ───────────── */
-    setReady(roomId, playerId) {
-        const room = this.rooms.get(roomId);
-        if (!room) {
-            console.warn(`⚠️ Room ${roomId} not found for setReady`);
-            return;
-        }
-        room.markPlayerReady(playerId);
-        // Уведомляем всех о изменении готовности
-        room.broadcast(JSON.stringify({
-            type: 'player_ready',
-            playerId: playerId,
-            room: room.toPublicInfo()
-        }));
-        // Проверяем можно ли начать игру
-        this.checkGameStart(room);
-    }
-    checkGameStart(room) {
-        const players = room.getPlayers();
-        const readyPlayers = players.filter((p) => p.isReady); // ✅ ИСПРАВЛЕНО: добавлена типизация
-        // Минимум 2 игрока, максимум согласно правилам комнаты
-        const canStart = players.length >= 2 &&
-            players.length <= room.maxPlayers &&
-            readyPlayers.length === players.length;
-        if (canStart) {
-            try {
-                const gameState = (0, startGame_1.startGame)({
-                    roomId: room.id,
-                    rules: room.rules,
-                    players: players
-                });
-                room.setGameState(gameState);
-                room.broadcast(JSON.stringify({
-                    type: 'game_started',
-                    gameState: gameState
-                }));
-                console.log(`🎮 Game started in room ${room.id}`);
-            }
-            catch (error) {
-                console.error(`❌ Error starting game in room ${room.id}:`, error);
-                room.broadcast(JSON.stringify({
-                    type: 'error',
-                    message: 'Failed to start game'
-                }));
-            }
-        }
-    }
-    /* ───────────── Игровые действия ───────────── */
-    handleGameAction(roomId, playerId, action) {
-        const room = this.rooms.get(roomId);
-        if (!room) {
-            console.warn(`⚠️ Room ${roomId} not found for game action`);
-            return;
-        }
-        const gameState = room.getGameState();
-        if (!gameState) {
-            console.warn(`⚠️ No active game in room ${roomId}`);
-            return;
-        }
-        try {
-            // Здесь должна быть логика обработки игрового действия
-            // Пока что просто транслируем действие всем игрокам
-            room.broadcast(JSON.stringify({
-                type: 'game_action',
-                playerId: playerId,
-                action: action,
-                gameState: gameState
-            }));
-            console.log(`🎮 Game action in room ${roomId}: ${action.type} by ${playerId}`);
-        }
-        catch (error) {
-            console.error(`❌ Error handling game action in room ${roomId}:`, error);
-            room.broadcast(JSON.stringify({
-                type: 'error',
-                message: 'Invalid game action'
-            }));
-        }
-    }
-    /* ───────────── Обработка сообщений ───────────── */
     handleMessage(socket, message) {
-        const { type, playerId } = message;
-        switch (type) {
-            case 'create_room':
-                this.createRoom(message.name, message.rules, message.rules.maxPlayers, socket, playerId);
-                break;
-            case 'join_room':
-                this.joinRoom(message.roomId, socket, playerId);
-                break;
-            case 'leave_room':
-                this.leaveRoom(socket, playerId);
-                break;
-            case 'set_ready':
-                this.setReady(message.roomId, playerId);
-                break;
-            case 'start_game':
-                // Для принудительного старта (может быть полезно для хоста)
-                const room = this.rooms.get(message.roomId);
-                if (room) {
-                    this.checkGameStart(room);
-                }
-                break;
-            case 'game_action':
-                this.handleGameAction(message.roomId, playerId, message.action);
-                break;
+        console.log('🎮 RoomManager handling message:', message.type);
+        switch (message.type) {
             case 'get_rooms':
                 this.sendRoomsList(socket);
                 break;
-            case 'heartbeat':
-                socket.send(JSON.stringify({ type: 'heartbeat_response' }));
+            case 'create_room':
+                // ✅ ИСПРАВЛЕНО: убран лишний параметр message.rules.maxPlayers
+                this.createRoom(message.name, message.rules, socket, message.playerId);
+                break;
+            case 'join_room':
+                this.joinRoom(message.roomId, socket, message.playerId);
+                break;
+            case 'leave_room':
+                this.leaveRoom(socket, message.playerId);
+                break;
+            case 'set_ready':
+                this.setPlayerReady(socket, message.playerId);
+                break;
+            case 'start_game':
+                this.startGame(socket, message.playerId);
                 break;
             default:
-                console.warn(`⚠️ Unknown message type: ${type}`);
-                socket.send(JSON.stringify({
-                    type: 'error',
-                    message: `Unknown message type: ${type}`
-                }));
+                console.log('❓ Unknown message type:', message.type);
         }
     }
-    /* ───────────── rooms_list ───────────── */
-    broadcastRooms() {
-        const list = this.getRooms();
-        const payload = JSON.stringify({ type: 'rooms_list', rooms: list });
-        // Отправляем всем подключенным клиентам
-        for (const room of this.rooms.values()) {
-            room.broadcast(payload);
+    // ✅ ИСПРАВЛЕНА СИГНАТУРА: убран параметр maxPlayers, берем из rules
+    createRoom(name, rules, socket, playerId) {
+        console.log(`🏠 Creating room: ${name} by player: ${playerId}`);
+        const roomId = (0, uuid_1.v4)();
+        // ✅ ИСПРАВЛЕНО: maxPlayers берется из rules.maxPlayers
+        const room = new Room(roomId, name, rules, rules.maxPlayers, playerId);
+        this.rooms.set(roomId, room);
+        this.socketPlayerMap.set(socket, playerId);
+        // Автоматически добавляем создателя в комнату
+        const hostPlayer = {
+            id: playerId,
+            name: `Player ${playerId.slice(-4)}`, // Временное имя
+            telegramId: parseInt(playerId.replace('tg_', '')),
+            isReady: false
+        };
+        room.addPlayer(hostPlayer);
+        this.playerRooms.set(playerId, roomId);
+        console.log(`✅ Room created: ${roomId}, Host: ${playerId}`);
+        // Отправляем подтверждение создателю
+        socket.send(JSON.stringify({
+            type: 'room_created',
+            room: room.getInfo(),
+            message: 'Комната успешно создана!'
+        }));
+        // Обновляем список комнат для всех
+        this.broadcastRoomsList();
+        return roomId;
+    }
+    joinRoom(roomId, socket, playerId) {
+        console.log(`🚪 Player ${playerId} trying to join room: ${roomId}`);
+        const room = this.rooms.get(roomId);
+        if (!room) {
+            socket.send(JSON.stringify({
+                type: 'error',
+                message: 'Комната не найдена'
+            }));
+            return;
         }
+        if (room.status !== 'waiting') {
+            socket.send(JSON.stringify({
+                type: 'error',
+                message: 'Игра уже началась'
+            }));
+            return;
+        }
+        const player = {
+            id: playerId,
+            name: `Player ${playerId.slice(-4)}`,
+            telegramId: parseInt(playerId.replace('tg_', '')),
+            isReady: false
+        };
+        if (!room.addPlayer(player)) {
+            socket.send(JSON.stringify({
+                type: 'error',
+                message: 'Комната заполнена'
+            }));
+            return;
+        }
+        this.playerRooms.set(playerId, roomId);
+        this.socketPlayerMap.set(socket, playerId);
+        console.log(`✅ Player ${playerId} joined room: ${roomId}`);
+        // Отправляем информацию о комнате новому игроку
+        socket.send(JSON.stringify({
+            type: 'room_joined',
+            room: room.getInfo()
+        }));
+        // Уведомляем всех игроков в комнате
+        this.broadcastToRoom(roomId, {
+            type: 'player_joined',
+            player: player,
+            room: room.getInfo()
+        });
+        this.broadcastRoomsList();
+    }
+    leaveRoom(socket, playerId) {
+        const roomId = this.playerRooms.get(playerId);
+        if (!roomId)
+            return;
+        const room = this.rooms.get(roomId);
+        if (!room)
+            return;
+        console.log(`🚪 Player ${playerId} leaving room: ${roomId}`);
+        room.removePlayer(playerId);
+        this.playerRooms.delete(playerId);
+        this.socketPlayerMap.delete(socket);
+        // Если комната пустая, удаляем её
+        if (room.players.size === 0) {
+            this.rooms.delete(roomId);
+            console.log(`🗑️ Empty room deleted: ${roomId}`);
+        }
+        else {
+            // Уведомляем оставшихся игроков
+            this.broadcastToRoom(roomId, {
+                type: 'player_left',
+                playerId: playerId,
+                room: room.getInfo()
+            });
+        }
+        this.broadcastRoomsList();
+    }
+    setPlayerReady(socket, playerId) {
+        const roomId = this.playerRooms.get(playerId);
+        if (!roomId)
+            return;
+        const room = this.rooms.get(roomId);
+        if (!room)
+            return;
+        const player = room.players.get(playerId);
+        if (!player)
+            return;
+        player.isReady = !player.isReady;
+        console.log(`🔄 Player ${playerId} ready status: ${player.isReady}`);
+        this.broadcastToRoom(roomId, {
+            type: 'player_ready_changed',
+            playerId: playerId,
+            isReady: player.isReady,
+            room: room.getInfo()
+        });
+    }
+    startGame(socket, playerId) {
+        const roomId = this.playerRooms.get(playerId);
+        if (!roomId)
+            return;
+        const room = this.rooms.get(roomId);
+        if (!room)
+            return;
+        if (room.hostId !== playerId) {
+            socket.send(JSON.stringify({
+                type: 'error',
+                message: 'Только хост может начать игру'
+            }));
+            return;
+        }
+        const allReady = Array.from(room.players.values()).every(p => p.isReady);
+        if (!allReady) {
+            socket.send(JSON.stringify({
+                type: 'error',
+                message: 'Не все игроки готовы'
+            }));
+            return;
+        }
+        room.status = 'playing';
+        console.log(`🎮 Game started in room: ${roomId}`);
+        this.broadcastToRoom(roomId, {
+            type: 'game_started',
+            room: room.getInfo()
+        });
+        this.broadcastRoomsList();
     }
     sendRoomsList(socket) {
-        const rooms = this.getRooms();
+        const roomsList = Array.from(this.rooms.values())
+            .filter(room => room.status === 'waiting')
+            .map(room => room.getInfo());
         socket.send(JSON.stringify({
             type: 'rooms_list',
-            rooms: rooms
+            rooms: roomsList
         }));
     }
-    getRooms() {
-        return Array.from(this.rooms.values())
-            .filter((r) => r.hasPlayers())
-            .map((r) => r.toPublicInfo());
-    }
-    /* ───────────── Обработка отключений ───────────── */
-    handleDisconnection(socket) {
-        // Находим игрока по сокету и удаляем из всех комнат
-        for (const room of this.rooms.values()) {
-            const player = room.getPlayerBySocket(socket);
-            if (player) {
-                console.log(`🔌 Player ${player.id} disconnected from room ${room.id}`);
-                this.leaveRoom(socket, player.id);
-                break;
+    broadcastRoomsList() {
+        const roomsList = Array.from(this.rooms.values())
+            .filter(room => room.status === 'waiting')
+            .map(room => room.getInfo());
+        const message = JSON.stringify({
+            type: 'rooms_list',
+            rooms: roomsList
+        });
+        // Отправляем всем подключенным сокетам
+        this.socketPlayerMap.forEach((playerId, socket) => {
+            if (socket.readyState === ws_1.default.OPEN) {
+                socket.send(message);
             }
+        });
+    }
+    broadcastToRoom(roomId, message) {
+        const room = this.rooms.get(roomId);
+        if (!room)
+            return;
+        const messageStr = JSON.stringify(message);
+        this.socketPlayerMap.forEach((playerId, socket) => {
+            if (room.players.has(playerId) && socket.readyState === ws_1.default.OPEN) {
+                socket.send(messageStr);
+            }
+        });
+    }
+    handleDisconnection(socket) {
+        const playerId = this.socketPlayerMap.get(socket);
+        if (playerId) {
+            console.log(`🔌 Player ${playerId} disconnected`);
+            this.leaveRoom(socket, playerId);
         }
     }
-    /* ───────────── Утилиты ───────────── */
-    getRoom(roomId) {
-        return this.rooms.get(roomId);
-    }
-    getRoomCount() {
-        return this.rooms.size;
-    }
-    getActiveRoomCount() {
-        return Array.from(this.rooms.values()).filter(r => r.hasPlayers()).length;
-    }
-    // Статистика для мониторинга
     getStats() {
         return {
-            totalRooms: this.getRoomCount(),
-            activeRooms: this.getActiveRoomCount(),
-            totalPlayers: Array.from(this.rooms.values()).reduce((sum, room) => sum + room.getPlayerCount(), 0),
-            gamesInProgress: Array.from(this.rooms.values()).filter(r => r.getGameState() !== null).length
+            totalRooms: this.rooms.size,
+            waitingRooms: Array.from(this.rooms.values()).filter(r => r.status === 'waiting').length,
+            playingRooms: Array.from(this.rooms.values()).filter(r => r.status === 'playing').length
         };
     }
 }
 exports.RoomManager = RoomManager;
-// ✅ Создаем singleton экземпляр для использования в messageHandler и server.ts
-exports.roomManager = new RoomManager();
