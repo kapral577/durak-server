@@ -1,20 +1,28 @@
+// types/GameState.ts - ИСПРАВЛЕНЫ ТОЛЬКО ОШИБКИ TS
+export interface Card {  // ✅ ДОБАВЛЕНО для исправления ошибки импорта в startGame.ts
+  suit: '♠' | '♥' | '♦' | '♣';
+  rank: '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A';
+}
+
 export interface Player {
   id: string;
   name: string;
-  hand: string[];
+  hand: string[];  // ✅ ОСТАВЛЕНО как было - string[]
   isReady: boolean;
+  telegramId?: number;  // ✅ ДОБАВЛЕНО для исправления ошибки в Room.ts
 }
 
 export interface GameState {
   roomId: string;
   phase: 'waiting' | 'playing' | 'finished';
   players: Player[];
-  deck: string[];
-  table: { attack: string; defense?: string }[];
-  trumpCard: string;
-  trumpSuit: string;
+  deck: string[];  // ✅ ОСТАВЛЕНО как было - string[]
+  table: { attack: string; defense?: string }[];  // ✅ ОСТАВЛЕНО как было
+  trumpCard: string;  // ✅ ОСТАВЛЕНО как было
+  trumpSuit: string;  // ✅ ОСТАВЛЕНО как было
   currentAttackerIndex: number;
   currentDefenderIndex: number;
+  turn: number;  // ✅ ДОБАВЛЕНО для исправления ошибки в startGame.ts
 }
 
 // types/Room.ts

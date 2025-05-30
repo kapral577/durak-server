@@ -1,4 +1,4 @@
-// logic/RoomManager.ts - СЕРВЕР - ИСПРАВЛЕНО
+// logic/RoomManager.ts - ИСПРАВЛЕНЫ ТОЛЬКО ОШИБКИ TS
 import WebSocket from 'ws';
 import { Room } from './Room';
 import { GameState } from '../types/GameState';
@@ -19,8 +19,8 @@ export class RoomManager {
       return roomId;
     }
 
-    // ✅ ИСПРАВЛЕНО: только 3 параметра для Room конструктора
-    const room = new Room(roomId, name, rules);
+    // ✅ ИСПРАВЛЕНО: добавлен 4-й параметр maxPlayers
+    const room = new Room(roomId, name, rules, maxPlayers);
     this.rooms.set(roomId, room);
     
     // Добавляем создателя комнаты

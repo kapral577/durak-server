@@ -1,106 +1,106 @@
-import { GameState } from '../types/GameState.js';
-import type { Rules } from '../types/Rules.js';
-import type { Slot } from '../types/Room.js'; // ✅ Используем типы из types/
-import { Player } from '../types/Player.js';
+// logic/startGame.ts - ИСПРАВЛЕНЫ ТОЛЬКО ОШИБКИ ТИПОВ
+import { GameState, Player, Card } from '../types/GameState';
+import { Rules } from '../types/Room';
 
-/* Входные данные от RoomManager */
-interface StartGameInput {
+export interface StartGameInput {
   roomId: string;
   rules: Rules;
-  slots: Slot[];
+  players: Player[];
 }
 
-export function startGame({ roomId, rules, slots }: StartGameInput): GameState {
-  // Формируем «чистых» игроков без ws
-  const players: Player[] = slots
-    .filter((s) => s.player !== null)
-    .map(({ player }) => ({
-      id: player!.playerId,
-      name: player!.name,
-      hand: [],
-      isReady: true, // ✅ Игроки уже готовы к игре
-    }));
+// ✅ ДОБАВЛЕНА функция конвертации Card в string (только для исправления типов)
+function cardToString(card: Card): string {
+  return `${card.rank}${card.suit}`;
+}
 
-  // ✅ Проверяем минимальное количество игроков
+export function startGame(input: StartGameInput): GameState {
+  const { roomId, rules, players } = input;
+  
   if (players.length < 2) {
-    throw new Error('Minimum 2 players required to start game');
+    throw new Error('Need at least 2 players to start game');
   }
 
-  // Генерируем и тасуем колоду
-  const deck = shuffle(generateDeck(rules.cardCount));
+  // Создаем колоду
+  const deck = createDeck();
+  shuffleDeck(deck);
 
-  // ✅ Проверяем, хватает ли карт
-  const HAND_SIZE = 6;
-  const totalCardsNeeded = players.length * HAND_SIZE + 1; // +1 для козыря
-  if (deck.length < totalCardsNeeded) {
-    throw new Error(`Not enough cards in deck. Need ${totalCardsNeeded}, have ${deck.length}`);
-  }
+  // Раздаем карты
+  const cardCount = rules.cardCount;
+  const playersWithCards = players.map(player => ({
+    ...player,
+    hand: deck.splice(0, cardCount).map(cardToString), // ✅ КОНВЕРТИРУЕМ в string[]
+    isReady: true
+  }));
 
-  // Раздаём по 6 карт
-  players.forEach((p) => (p.hand = deck.splice(0, HAND_SIZE)));
+  // Определяем козырь
+  const trumpCardObj = deck.length > 0 ? deck[deck.length - 1] : null;
+  const trumpCard = trumpCardObj ? cardToString(trumpCardObj) : ''; // ✅ КОНВЕРТИРУЕМ в string
+  const trumpSuit = trumpCardObj?.suit || '♠';
 
-  // Берём козырь
-  const trumpCard = deck.pop()!;
-  const trumpSuit = trumpCard.slice(-1);
+  // Определяем первого игрока (у кого младший козырь)
+  let attackerIndex = 0;
+  let lowestTrumpValue = Infinity;
 
-  // ✅ Определяем первого игрока (у кого младший козырь)
-  const { attackerIndex, defenderIndex } = determineFirstPlayer(players, trumpSuit);
+  playersWithCards.forEach((player, index) => {
+    // ✅ КОНВЕРТИРУЕМ string обратно в Card для логики
+    const trumpCards = player.hand
+      .map(cardStr => ({ rank: cardStr.slice(0, -1) as Card['rank'], suit: cardStr.slice(-1) as Card['suit'] }))
+      .filter(card => card.suit === trumpSuit);
+    
+    if (trumpCards.length > 0) {
+      const minTrump = Math.min(...trumpCards.map(card => getCardValue(card.rank)));
+      if (minTrump < lowestTrumpValue) {
+        lowestTrumpValue = minTrump;
+        attackerIndex = index;
+      }
+    }
+  });
+
+  const defenderIndex = (attackerIndex + 1) % playersWithCards.length;
 
   const gameState: GameState = {
     roomId,
     phase: 'playing',
-    players,
-    deck,
+    players: playersWithCards,
+    deck: deck.map(cardToString), // ✅ КОНВЕРТИРУЕМ в string[]
     table: [],
-    trumpCard,
+    trumpCard, // ✅ УЖЕ string
     trumpSuit,
     currentAttackerIndex: attackerIndex,
     currentDefenderIndex: defenderIndex,
+    turn: 1
+    // ✅ УБРАНЫ gameMode, throwingMode, maxPlayers - их нет в GameState
   };
 
+  console.log(`🎮 Game started in room ${roomId} with ${players.length} players`);
   return gameState;
 }
 
-/* ─────────── Вспомогалки ─────────── */
-
-function generateDeck(count: number): string[] {
-  const suits = ['♠', '♥', '♦', '♣'];
-  const values =
-    count === 36
-      ? ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
-      : ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-  return suits.flatMap((suit) => values.map((v) => v + suit));
-}
-
-function shuffle<T>(arr: T[]): T[] {
-  const result = [...arr];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
+function createDeck(): Card[] {
+  const suits: Card['suit'][] = ['♠', '♥', '♦', '♣'];
+  const ranks: Card['rank'][] = ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+  
+  const deck: Card[] = [];
+  for (const suit of suits) {
+    for (const rank of ranks) {
+      deck.push({ suit, rank });
+    }
   }
-  return result;
+  
+  return deck;
 }
 
-// ✅ Определяем первого игрока по правилам дурака
-function determineFirstPlayer(players: Player[], trumpSuit: string): { attackerIndex: number; defenderIndex: number } {
-  const cardValues = ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-  
-  let lowestTrump = { playerIndex: -1, cardValue: 999 };
-  
-  players.forEach((player, index) => {
-    player.hand.forEach(card => {
-      if (card.endsWith(trumpSuit)) {
-        const value = cardValues.indexOf(card.slice(0, -1));
-        if (value !== -1 && value < lowestTrump.cardValue) {
-          lowestTrump = { playerIndex: index, cardValue: value };
-        }
-      }
-    });
-  });
-  
-  // Если козырей нет ни у кого, берем первого игрока
-  const attackerIndex = lowestTrump.playerIndex !== -1 ? lowestTrump.playerIndex : 0;
-  const defenderIndex = (attackerIndex + 1) % players.length;
-  
-  return { attackerIndex, defenderIndex };
+function shuffleDeck(deck: Card[]): void {
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+}
+
+function getCardValue(rank: Card['rank']): number {
+  const values: Record<Card['rank'], number> = {
+    '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 
+    'J': 11, 'Q': 12, 'K': 13, 'A': 14
+  };
+  return values[rank];
 }
