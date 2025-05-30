@@ -1,5 +1,5 @@
-// server.ts - СЕРВЕР - ИСПРАВЛЕНО
 import WebSocket from 'ws';
+import http from 'http';  // ✅ ДОБАВЛЕНО
 import { RoomManager } from './logic/RoomManager';
 
 interface AuthenticatedClient {
@@ -16,6 +16,7 @@ interface VerifyClientInfo {
 }
 
 class DurakGameServer {
+  private server: http.Server;  // ✅ ДОБАВЛЕНО
   private wss: WebSocket.Server;
   private roomManager: RoomManager;
   private authenticatedClients = new Map<WebSocket, AuthenticatedClient>();
@@ -23,12 +24,29 @@ class DurakGameServer {
 
   constructor() {
     this.port = parseInt(process.env.PORT || '3001');
+    
+    // ✅ СОЗДАЕМ HTTP СЕРВЕР
+    this.server = http.createServer((req, res) => {
+      // Простой HTTP endpoint для проверки статуса
+      res.writeHead(200, { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      });
+      res.end(JSON.stringify({ 
+        status: 'Durak Game Server is running',
+        timestamp: new Date().toISOString(),
+        connectedClients: this.authenticatedClients.size
+      }));
+    });
+
+    // ✅ ПРИВЯЗЫВАЕМ WebSocket К HTTP СЕРВЕРУ
     this.wss = new WebSocket.Server({ 
-      port: this.port,
+      server: this.server,  // ← ИСПРАВЛЕНО!
       verifyClient: (info: VerifyClientInfo) => {
         const allowedOrigins = [
           process.env.FRONTEND_URL,
-          'https://your-app.vercel.app',
+          'https://durakapp.vercel.app',
+          'https://durakapp-nyph.vercel.app',
           'localhost:3000'
         ].filter(Boolean);
         
@@ -61,11 +79,17 @@ class DurakGameServer {
       });
     }, 30000);
 
+    // ✅ ЗАПУСКАЕМ HTTP СЕРВЕР (НЕ WebSocket напрямую)
+    this.server.listen(this.port, () => {
+      console.log(`✅ HTTP + WebSocket server listening on port ${this.port}`);
+    });
+
     // Graceful shutdown
     process.on('SIGTERM', this.shutdown.bind(this));
     process.on('SIGINT', this.shutdown.bind(this));
   }
 
+  // ✅ ВСЯ ОСТАЛЬНАЯ ЛОГИКА ОСТАЕТСЯ ТОЧНО ТАКОЙ ЖЕ
   private handleConnection(socket: WebSocket): void {
     console.log('🔌 New connection attempt');
     
@@ -197,8 +221,10 @@ class DurakGameServer {
   private shutdown(): void {
     console.log('🛑 Shutting down server...');
     this.wss.close(() => {
-      console.log('✅ Server shut down gracefully');
-      process.exit(0);
+      this.server.close(() => {  // ✅ ДОБАВЛЕНО
+        console.log('✅ Server shut down gracefully');
+        process.exit(0);
+      });
     });
   }
 
