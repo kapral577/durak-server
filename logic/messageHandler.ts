@@ -1,4 +1,4 @@
-// logic/messageHandler.ts - ПОЛНОЕ ИСПРАВЛЕНИЕ ВСЕХ ОШИБОК
+// logic/messageHandler.ts - ИСПРАВЛЕНЫ ВСЕ СИНТАКСИЧЕСКИЕ ОШИБКИ
 import type { WebSocket } from 'ws';
 import { RoomManager } from './RoomManager';
 
@@ -32,7 +32,7 @@ export function messageHandler(socket: WebSocket, message: string): void {
           return;
         }
 
-        // ✅ ИСПРАВЛЕНО: используем экземпляр roomManager, убран лишний параметр
+        // ✅ ИСПРАВЛЕНО: используем экземпляр roomManager с telegramUser
         roomManager.createRoom(name, rules, socket, data.playerId, data.telegramUser);
         break;
       }
@@ -47,7 +47,15 @@ export function messageHandler(socket: WebSocket, message: string): void {
           return;
         }
 
-        // ✅ ИСПРАВЛЕНО: используем экземпляр roomManager
+        // ✅ ДОБАВЛЕН DEBUG LOG
+        console.log('📄 Join room data:', { 
+          roomId, 
+          playerId: data.playerId, 
+          hasTelegramUser: !!data.telegramUser,
+          telegramUserName: data.telegramUser?.first_name 
+        });
+
+        // ✅ ИСПРАВЛЕНО: используем экземпляр roomManager с telegramUser
         roomManager.joinRoom(roomId, socket, data.playerId, data.telegramUser);
         break;
       }
@@ -100,10 +108,8 @@ export function messageHandler(socket: WebSocket, message: string): void {
 
       /* ────────── Heartbeat ────────── */
       case 'heartbeat': {
-        socket.send(JSON.stringify({
-          type: 'heartbeat_response',
-          timestamp: Date.now()
-        }));
+        // ✅ ОБРАБОТКА HEARTBEAT
+        roomManager.handleHeartbeat(socket, data.playerId);
         break;
       }
 
@@ -124,8 +130,8 @@ export function messageHandler(socket: WebSocket, message: string): void {
           type: 'error',
           message: `Unknown message type: ${data.type}`
         }));
-        break; // ✅ ДОБАВЛЕН break
-    }
+        break;
+    } // ✅ ДОБАВЛЕНА ЗАКРЫВАЮЩАЯ СКОБКА ДЛЯ SWITCH
 
   } catch (error) {
     console.error('❌ Error parsing message:', error);
@@ -134,7 +140,7 @@ export function messageHandler(socket: WebSocket, message: string): void {
       message: 'Invalid JSON format'
     }));
   }
-}
+} // ✅ ДОБАВЛЕНА ЗАКРЫВАЮЩАЯ СКОБКА ДЛЯ ФУНКЦИИ
 
 // ✅ ЭКСПОРТИРУЕМ ЭКЗЕМПЛЯР ДЛЯ ИСПОЛЬЗОВАНИЯ В server.ts
 export { roomManager };
