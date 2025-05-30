@@ -1,6 +1,6 @@
 // logic/messageHandler.ts - СЕРВЕР - ИСПРАВЛЕНО на основе оригинала
 import type { WebSocket } from 'ws';
-import { roomManager } from './RoomManager';  // ✅ ИСПРАВЛЕН импорт
+import { RoomManager } from './RoomManager';  // ✅ ИСПРАВЛЕН импорт
 
 export function messageHandler(socket: WebSocket, message: string): void {
   try {
