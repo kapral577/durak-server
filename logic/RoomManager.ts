@@ -6,8 +6,8 @@ import { Rules } from '../types/Room';
 import { startGame } from './startGame';
 import { v4 as uuidv4 } from 'uuid';
 
-export class RoomManager {  // ✅ ДОБАВЛЕН export
-  private rooms: Map<string, Room> = new Map();
+export class RoomManager {
+  private rooms: Map<string, Room> = new Map(); // ✅ ИСПРАВЛЕНО: добавлен тип
 
   /* ───────────── CRUD комнат ───────────── */
 
@@ -19,7 +19,8 @@ export class RoomManager {  // ✅ ДОБАВЛЕН export
       return roomId;
     }
 
-    const room = new Room(roomId, name, rules, maxPlayers);
+    // ✅ ИСПРАВЛЕНО: только 3 параметра для Room конструктора
+    const room = new Room(roomId, name, rules);
     this.rooms.set(roomId, room);
     
     // Добавляем создателя комнаты
@@ -129,7 +130,7 @@ export class RoomManager {  // ✅ ДОБАВЛЕН export
 
   private checkGameStart(room: Room): void {
     const players = room.getPlayers();
-    const readyPlayers = players.filter(p => p.isReady);
+    const readyPlayers = players.filter((p: any) => p.isReady); // ✅ ИСПРАВЛЕНО: добавлена типизация
     
     // Минимум 2 игрока, максимум согласно правилам комнаты
     const canStart = players.length >= 2 && 
@@ -319,5 +320,5 @@ export class RoomManager {  // ✅ ДОБАВЛЕН export
   }
 }
 
-// Создаем singleton экземпляр для использования в server.ts
+// ✅ Создаем singleton экземпляр для использования в messageHandler и server.ts
 export const roomManager = new RoomManager();

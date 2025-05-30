@@ -1,3 +1,4 @@
+// server.ts - СЕРВЕР - ИСПРАВЛЕНО
 import WebSocket from 'ws';
 import { RoomManager } from './logic/RoomManager';
 
@@ -8,7 +9,6 @@ interface AuthenticatedClient {
   playerId: string;
 }
 
-// ✅ ДОБАВИЛИ интерфейс для типизации
 interface VerifyClientInfo {
   origin?: string;
   secure: boolean;
@@ -25,7 +25,7 @@ class DurakGameServer {
     this.port = parseInt(process.env.PORT || '3001');
     this.wss = new WebSocket.Server({ 
       port: this.port,
-      verifyClient: (info: VerifyClientInfo) => {  // ✅ ДОБАВИЛИ типизацию
+      verifyClient: (info: VerifyClientInfo) => {
         const allowedOrigins = [
           process.env.FRONTEND_URL,
           'https://your-app.vercel.app',
@@ -33,10 +33,10 @@ class DurakGameServer {
         ].filter(Boolean);
         
         const origin = info.origin;
-        if (!origin) return true;  // ✅ ИСПРАВИЛИ проверку undefined
+        if (!origin) return true;
         
         return allowedOrigins.some(allowed => 
-          allowed && origin.includes(allowed.replace('https://', ''))  // ✅ ДОБАВИЛИ проверку allowed
+          allowed && origin.includes(allowed.replace('https://', ''))
         );
       }
     });
@@ -45,11 +45,14 @@ class DurakGameServer {
     this.setupServer();
     
     console.log(`🚀 Durak Game Server running on port ${this.port}`);
+    console.log(`📱 Frontend URL: ${process.env.FRONTEND_URL || 'Not set'}`);
+    console.log(`🤖 Bot Token: ${process.env.TELEGRAM_BOT_TOKEN ? '✅ Set' : '❌ Missing'}`);
   }
 
   private setupServer(): void {
     this.wss.on('connection', this.handleConnection.bind(this));
     
+    // Heartbeat для поддержания соединений
     setInterval(() => {
       this.wss.clients.forEach((ws) => {
         if (ws.readyState === WebSocket.OPEN) {
@@ -58,6 +61,7 @@ class DurakGameServer {
       });
     }, 30000);
 
+    // Graceful shutdown
     process.on('SIGTERM', this.shutdown.bind(this));
     process.on('SIGINT', this.shutdown.bind(this));
   }
@@ -70,7 +74,7 @@ class DurakGameServer {
       socket.close(4001, 'Authentication timeout');
     }, 10000);
 
-    socket.on('message', (data: WebSocket.Data) => {  // ✅ ДОБАВИЛИ типизацию
+    socket.on('message', (data: WebSocket.Data) => {
       try {
         const message = JSON.parse(data.toString());
         
@@ -98,26 +102,32 @@ class DurakGameServer {
       }
     });
 
-    socket.on('close', (code: number, reason: Buffer) => {  // ✅ ДОБАВИЛИ типизацию
+    socket.on('close', (code: number, reason: Buffer) => {
       clearTimeout(authTimeout);
       this.handleDisconnection(socket);
       console.log(`🔌 Connection closed: ${code} ${reason.toString()}`);
     });
 
-    socket.on('error', (error: Error) => {  // ✅ ДОБАВИЛИ типизацию
+    socket.on('error', (error: Error) => {
       console.error('❌ WebSocket error:', error);
+    });
+
+    socket.on('pong', () => {
+      // Heartbeat response received
     });
   }
 
   private handleAuthentication(socket: WebSocket, message: any): void {
     console.log('🔐 Authentication attempt');
     
+    // В development режиме принимаем тестовых пользователей
     if (process.env.NODE_ENV === 'development' && message.telegramUser?.id < 1000000) {
       console.log('🧪 Development mode: accepting test user');
       this.createAuthenticatedClient(socket, message.telegramUser, 'dev_token');
       return;
     }
 
+    // В production проверяем Telegram данные
     const telegramUser = message.telegramUser;
     if (!telegramUser) {
       console.log('❌ Invalid Telegram authentication');
@@ -129,6 +139,7 @@ class DurakGameServer {
       return;
     }
 
+    // В реальном проекте здесь должна быть валидация initData
     const authToken = `token_${telegramUser.id}_${Date.now()}`;
     this.createAuthenticatedClient(socket, telegramUser, authToken);
   }
@@ -159,6 +170,8 @@ class DurakGameServer {
     }));
 
     console.log(`✅ User authenticated: ${telegramUser.first_name} (${telegramUser.id})`);
+    
+    // Отправляем список комнат после аутентификации
     this.roomManager.sendRoomsList(socket);
   }
 
@@ -188,6 +201,16 @@ class DurakGameServer {
       process.exit(0);
     });
   }
+
+  // Метод для получения статистики сервера
+  getServerStats(): any {
+    return {
+      connectedClients: this.authenticatedClients.size,
+      totalConnections: this.wss.clients.size,
+      ...this.roomManager.getStats()
+    };
+  }
 }
 
+// Запуск сервера
 new DurakGameServer();
