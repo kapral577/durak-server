@@ -33,7 +33,7 @@ export function messageHandler(socket: WebSocket, message: string): void {
         }
 
         // ✅ ИСПРАВЛЕНО: используем экземпляр roomManager, убран лишний параметр
-        roomManager.createRoom(name, rules, socket, data.playerId);
+        roomManager.createRoom(name, rules, socket, data.playerId, data.telegramUser);
         break;
       }
 
@@ -48,7 +48,7 @@ export function messageHandler(socket: WebSocket, message: string): void {
         }
 
         // ✅ ИСПРАВЛЕНО: используем экземпляр roomManager
-        roomManager.joinRoom(roomId, socket, data.playerId);
+        roomManager.joinRoom(roomId, socket, data.playerId, data.telegramUser);
         break;
       }
 

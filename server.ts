@@ -334,7 +334,7 @@ class DurakGameServer {
     // ✅ ОБРАБОТКА HEARTBEAT СООБЩЕНИЙ
     if (message.type === 'heartbeat') {
       client.lastHeartbeat = new Date();
-      socket.send(JSON.stringify({
+      client.socket.send(JSON.stringify({
         type: 'heartbeat_response',
         timestamp: Date.now()
       }));
