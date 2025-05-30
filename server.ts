@@ -8,6 +8,13 @@ interface AuthenticatedClient {
   playerId: string;
 }
 
+// ✅ ДОБАВИЛИ интерфейс для типизации
+interface VerifyClientInfo {
+  origin?: string;
+  secure: boolean;
+  req: any;
+}
+
 class DurakGameServer {
   private wss: WebSocket.Server;
   private roomManager: RoomManager;
@@ -18,7 +25,7 @@ class DurakGameServer {
     this.port = parseInt(process.env.PORT || '3001');
     this.wss = new WebSocket.Server({ 
       port: this.port,
-      verifyClient: (info) => {
+      verifyClient: (info: VerifyClientInfo) => {  // ✅ ДОБАВИЛИ типизацию
         const allowedOrigins = [
           process.env.FRONTEND_URL,
           'https://your-app.vercel.app',
@@ -26,8 +33,10 @@ class DurakGameServer {
         ].filter(Boolean);
         
         const origin = info.origin;
-        return !origin || allowedOrigins.some(allowed => 
-          origin.includes(allowed.replace('https://', ''))
+        if (!origin) return true;  // ✅ ИСПРАВИЛИ проверку undefined
+        
+        return allowedOrigins.some(allowed => 
+          allowed && origin.includes(allowed.replace('https://', ''))  // ✅ ДОБАВИЛИ проверку allowed
         );
       }
     });
@@ -61,7 +70,7 @@ class DurakGameServer {
       socket.close(4001, 'Authentication timeout');
     }, 10000);
 
-    socket.on('message', (data) => {
+    socket.on('message', (data: WebSocket.Data) => {  // ✅ ДОБАВИЛИ типизацию
       try {
         const message = JSON.parse(data.toString());
         
@@ -89,13 +98,13 @@ class DurakGameServer {
       }
     });
 
-    socket.on('close', (code, reason) => {
+    socket.on('close', (code: number, reason: Buffer) => {  // ✅ ДОБАВИЛИ типизацию
       clearTimeout(authTimeout);
       this.handleDisconnection(socket);
-      console.log(`🔌 Connection closed: ${code} ${reason}`);
+      console.log(`🔌 Connection closed: ${code} ${reason.toString()}`);
     });
 
-    socket.on('error', (error) => {
+    socket.on('error', (error: Error) => {  // ✅ ДОБАВИЛИ типизацию
       console.error('❌ WebSocket error:', error);
     });
   }
