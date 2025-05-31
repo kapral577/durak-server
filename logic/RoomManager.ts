@@ -1,4 +1,4 @@
-// logic/RoomManager.ts - ИСПРАВЛЕНЫ ВСЕ СИНТАКСИЧЕСКИЕ ОШИБКИ
+// logic/RoomManager.ts - АВТОМАТИЧЕСКИЙ СТАРТ ИГРЫ КОГДА ВСЕ ГОТОВЫ
 import { v4 as uuidv4 } from 'uuid';
 import WebSocket from 'ws';
 
@@ -62,7 +62,6 @@ class Room {
     this.players.delete(playerId);
   }
 
-  // ✅ ИСПРАВЛЕН - добавлена закрывающая скобка
   disconnectPlayer(playerId: string): void {
     const player = this.players.get(playerId);
     if (player) {
@@ -70,9 +69,8 @@ class Room {
       player.lastSeen = new Date();
       console.log(`🔌 Player ${player.name} marked as disconnected`);
     }
-  } // ✅ ДОБАВЛЕНА ЗАКРЫВАЮЩАЯ СКОБКА
+  }
 
-  // ✅ ИСПРАВЛЕН - добавлена закрывающая скобка
   reconnectPlayer(playerId: string): void {
     const player = this.players.get(playerId);
     if (player) {
@@ -80,7 +78,7 @@ class Room {
       player.lastSeen = new Date();
       console.log(`✅ Player ${player.name} reconnected`);
     }
-  } // ✅ ДОБАВЛЕНА ЗАКРЫВАЮЩАЯ СКОБКА
+  }
 
   getInfo(): RoomInfo {
     return {
@@ -257,7 +255,7 @@ export class RoomManager {
       room: room.getInfo()
     }));
 
-    // ✅ КРИТИЧЕСКИ ВАЖНО - ОТПРАВЛЯЕМ ХОСТУ УВЕДОМЛЕНИЕ
+    // Отправляем хосту уведомление
     console.log('📡 Broadcasting player_joined to all players in room...');
     this.broadcastToRoom(roomId, {
       type: 'player_joined',
@@ -306,7 +304,6 @@ export class RoomManager {
     this.broadcastRoomsList();
   }
 
-  // ✅ ИСПРАВЛЕН handleDisconnection
   handleDisconnection(socket: WebSocket): void {
     const playerId = this.socketPlayerMap.get(socket);
     if (playerId) {
@@ -375,6 +372,7 @@ export class RoomManager {
     }));
   }
 
+  // ✅ АВТОМАТИЧЕСКИЙ СТАРТ ИГРЫ В setPlayerReady
   setPlayerReady(socket: WebSocket, playerId: string): void {
     const roomId = this.playerRooms.get(playerId);
     if (!roomId) return;
@@ -389,58 +387,85 @@ export class RoomManager {
 
     console.log(`🔄 Player ${player.name} ready status: ${player.isReady}`);
 
+    // ✅ АВТОМАТИЧЕСКАЯ ПРОВЕРКА ГОТОВНОСТИ ВСЕХ ИГРОКОВ
+    const connectedPlayers = Array.from(room.players.values()).filter(p => p.isConnected);
+    const readyPlayers = connectedPlayers.filter(p => p.isReady);
+    const allReady = connectedPlayers.length >= 2 && readyPlayers.length === connectedPlayers.length;
+    const enoughPlayers = connectedPlayers.length >= 2;
+
+    console.log(`📊 Room ${roomId} status: ${readyPlayers.length}/${connectedPlayers.length} players ready, enough players: ${enoughPlayers}, all ready: ${allReady}`);
+
+    // ✅ ОТПРАВЛЯЕМ ОБНОВЛЕНИЕ СТАТУСА С ДОПОЛНИТЕЛЬНОЙ ИНФОРМАЦИЕЙ
     this.broadcastToRoom(roomId, {
       type: 'player_ready_changed',
       playerId: playerId,
       isReady: player.isReady,
-      room: room.getInfo()
+      room: room.getInfo(),
+      readyCount: readyPlayers.length,
+      totalCount: connectedPlayers.length,
+      allReady: allReady,
+      canStartGame: allReady,
+      needMorePlayers: !enoughPlayers
     });
+
+    // ✅ АВТОМАТИЧЕСКИЙ СТАРТ ИГРЫ
+    if (allReady && enoughPlayers) {
+      console.log(`🎮 Auto-starting game in room: ${roomId} (all ${connectedPlayers.length} players ready)`);
+      
+      // Небольшая задержка для UI обновления
+      setTimeout(() => {
+        // Проверяем что все еще готовы (на случай если кто-то отменил готовность)
+        const stillConnected = Array.from(room.players.values()).filter(p => p.isConnected);
+        const stillReady = stillConnected.filter(p => p.isReady);
+        const stillAllReady = stillConnected.length >= 2 && stillReady.length === stillConnected.length;
+        
+        if (stillAllReady && room.status === 'waiting') {
+          room.status = 'playing';
+
+          this.broadcastToRoom(roomId, {
+            type: 'game_started',
+            room: room.getInfo(),
+            message: `🎮 Игра началась автоматически! Все ${stillConnected.length} игроков готовы.`,
+            autoStarted: true,
+            startedBy: 'system'
+          });
+
+          this.broadcastRoomsList();
+          console.log(`✅ Game auto-started successfully in room: ${roomId}`);
+        } else {
+          console.log(`⚠️ Auto-start cancelled in room: ${roomId} - players changed ready status`);
+        }
+      }, 1500); // 1.5 секунды задержки для UI
+    } else if (!enoughPlayers) {
+      console.log(`⏳ Room ${roomId} waiting for more players (${connectedPlayers.length}/2 minimum)`);
+    } else {
+      console.log(`⏳ Room ${roomId} waiting for players to be ready (${readyPlayers.length}/${connectedPlayers.length})`);
+    }
   }
 
+  // ✅ ЗАГЛУШКА ДЛЯ startGame - ТЕПЕРЬ НЕ НУЖЕН
   startGame(socket: WebSocket, playerId: string): void {
+    console.log('ℹ️ Manual start game request received, but auto-start is enabled.');
+    
     const roomId = this.playerRooms.get(playerId);
     if (!roomId) return;
 
     const room = this.rooms.get(roomId);
     if (!room) return;
 
-    if (room.hostId !== playerId) {
-      socket.send(JSON.stringify({
-        type: 'error',
-        message: 'Только хост может начать игру'
-      }));
-      return;
-    }
+    socket.send(JSON.stringify({
+      type: 'info',
+      message: '🤖 Игра запустится автоматически когда все игроки будут готовы! Просто нажмите "Готов".'
+    }));
 
+    // ✅ ПОКАЗЫВАЕМ ТЕКУЩИЙ СТАТУС
     const connectedPlayers = Array.from(room.players.values()).filter(p => p.isConnected);
-    const allReady = connectedPlayers.every(p => p.isReady);
+    const readyPlayers = connectedPlayers.filter(p => p.isReady);
     
-    if (connectedPlayers.length < 2) {
-      socket.send(JSON.stringify({
-        type: 'error',
-        message: 'Недостаточно подключенных игроков'
-      }));
-      return;
-    }
-
-    if (!allReady) {
-      socket.send(JSON.stringify({
-        type: 'error',
-        message: 'Не все подключенные игроки готовы'
-      }));
-      return;
-    }
-
-    room.status = 'playing';
-
-    console.log(`🎮 Game started in room: ${roomId}`);
-
-    this.broadcastToRoom(roomId, {
-      type: 'game_started',
-      room: room.getInfo()
-    });
-
-    this.broadcastRoomsList();
+    socket.send(JSON.stringify({
+      type: 'info',
+      message: `📊 Статус: ${readyPlayers.length}/${connectedPlayers.length} игроков готовы`
+    }));
   }
 
   sendRoomsList(socket: WebSocket): void {
@@ -471,7 +496,6 @@ export class RoomManager {
     });
   }
 
-  // ✅ ИСПРАВЛЕН broadcastToRoom - добавлены все закрывающие скобки
   private broadcastToRoom(roomId: string, message: any): void {
     const room = this.rooms.get(roomId);
     if (!room) return;
