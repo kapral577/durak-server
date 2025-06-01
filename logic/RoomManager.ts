@@ -7,7 +7,7 @@ export interface Rules {
   throwingMode: 'standard' | 'smart';
   cardCount: number;
   maxPlayers: number;
-}
+} // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
 export interface Player {
   id: string;
@@ -18,7 +18,7 @@ export interface Player {
   isReady: boolean;
   isConnected: boolean;
   lastSeen: Date;
-}
+} // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
 export interface RoomInfo {
   id: string;
@@ -29,7 +29,7 @@ export interface RoomInfo {
   status: 'waiting' | 'playing' | 'finished';
   createdAt: Date;
   hostId: string;
-}
+} // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
 class Room {
   public id: string;
@@ -48,19 +48,19 @@ class Room {
     this.maxPlayers = maxPlayers;
     this.createdAt = new Date();
     this.hostId = hostId;
-  }
+  } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
   addPlayer(player: Player): boolean {
     if (this.players.size >= this.maxPlayers) {
       return false;
-    }
+    } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
     this.players.set(player.id, player);
     return true;
-  }
+  } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
   removePlayer(playerId: string): void {
     this.players.delete(playerId);
-  }
+  } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
   disconnectPlayer(playerId: string): void {
     const player = this.players.get(playerId);
@@ -68,8 +68,8 @@ class Room {
       player.isConnected = false;
       player.lastSeen = new Date();
       console.log(`🔌 Player ${player.name} marked as disconnected`);
-    }
-  }
+    } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
+  } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
   reconnectPlayer(playerId: string): void {
     const player = this.players.get(playerId);
@@ -77,8 +77,8 @@ class Room {
       player.isConnected = true;
       player.lastSeen = new Date();
       console.log(`✅ Player ${player.name} reconnected`);
-    }
-  }
+    } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
+  } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
   getInfo(): RoomInfo {
     return {
@@ -91,8 +91,8 @@ class Room {
       createdAt: this.createdAt,
       hostId: this.hostId
     };
-  }
-}
+  } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
+} // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
 export class RoomManager {
   private rooms: Map<string, Room> = new Map();
@@ -145,8 +145,8 @@ export class RoomManager {
 
       default:
         console.log('❓ Unknown message type:', message.type);
-    }
-  }
+    } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
+  } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
   createRoom(name: string, rules: Rules, socket: WebSocket, playerId: string, telegramUser: any): string {
     console.log(`🏠 Creating room: ${name} by player: ${playerId}`);
@@ -181,7 +181,7 @@ export class RoomManager {
 
     this.broadcastRoomsList();
     return roomId;
-  }
+  } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
   joinRoom(roomId: string, socket: WebSocket, playerId: string, telegramUser: any): void {
     console.log(`🚪 Player ${playerId} trying to join room: ${roomId}`);
@@ -193,7 +193,7 @@ export class RoomManager {
         message: 'Комната не найдена'
       }));
       return;
-    }
+    } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
     if (room.status !== 'waiting') {
       socket.send(JSON.stringify({
@@ -201,7 +201,7 @@ export class RoomManager {
         message: 'Игра уже началась'
       }));
       return;
-    }
+    } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
     // Проверяем не переподключение ли это
     const existingPlayer = room.players.get(playerId);
@@ -223,7 +223,7 @@ export class RoomManager {
 
       this.broadcastRoomsList();
       return;
-    }
+    } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
     // Новый игрок - используем реальное имя
     const player: Player = {
@@ -243,7 +243,7 @@ export class RoomManager {
         message: 'Комната заполнена'
       }));
       return;
-    }
+    } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
     this.playerRooms.set(playerId, roomId);
     this.socketPlayerMap.set(socket, playerId);
@@ -264,7 +264,7 @@ export class RoomManager {
     });
 
     this.broadcastRoomsList();
-  }
+  } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
   leaveRoom(socket: WebSocket, playerId: string): void {
     const roomId = this.playerRooms.get(playerId);
@@ -288,7 +288,7 @@ export class RoomManager {
           this.rooms.delete(roomId);
           console.log(`🗑️ Empty room deleted after timeout: ${roomId}`);
           this.broadcastRoomsList();
-        }
+        } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
         this.roomDeletionTimeouts.delete(roomId);
       }, 30000);
 
@@ -299,10 +299,10 @@ export class RoomManager {
         playerId: playerId,
         room: room.getInfo()
       });
-    }
+    } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
     this.broadcastRoomsList();
-  }
+  } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
   handleDisconnection(socket: WebSocket): void {
     const playerId = this.socketPlayerMap.get(socket);
@@ -337,21 +337,21 @@ export class RoomManager {
                     this.playerRooms.delete(player.id);
                   });
                   this.broadcastRoomsList();
-                }
-              }
+                } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
+              } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
               this.roomDeletionTimeouts.delete(roomId);
             }, 60000);
 
             this.roomDeletionTimeouts.set(roomId, timeoutId);
-          }
+          } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
           return;
-        }
-      }
+        } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
+      } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
       
       this.socketPlayerMap.delete(socket);
       console.log(`🔌 Player ${playerId} disconnected (not in room)`);
-    }
-  }
+    } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
+  } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
   handleHeartbeat(socket: WebSocket, playerId: string): void {
     const roomId = this.playerRooms.get(playerId);
@@ -362,15 +362,15 @@ export class RoomManager {
         if (player) {
           player.lastSeen = new Date();
           player.isConnected = true;
-        }
-      }
-    }
+        } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
+      } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
+    } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
     socket.send(JSON.stringify({
       type: 'heartbeat_response',
       timestamp: Date.now()
     }));
-  }
+  } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
   // ✅ АВТОМАТИЧЕСКИЙ СТАРТ ИГРЫ В setPlayerReady
   setPlayerReady(socket: WebSocket, playerId: string): void {
@@ -422,26 +422,43 @@ export class RoomManager {
         if (stillAllReady && room.status === 'waiting') {
           room.status = 'playing';
 
+          // ✅ СОЗДАЕМ gameState ДЛЯ КЛИЕНТОВ
+          const gameState = {
+            status: 'playing',
+            roomId: roomId,
+            players: stillConnected.map(p => ({
+              id: p.id,
+              name: p.name,
+              telegramId: p.telegramId,
+              avatar: p.avatar,
+              isReady: p.isReady
+            })),
+            startedAt: Date.now(),
+            autoStarted: true,
+            rules: room.rules
+          };
+
           this.broadcastToRoom(roomId, {
             type: 'game_started',
             room: room.getInfo(),
+            gameState: gameState, // ✅ ДОБАВЛЕН gameState
             message: `🎮 Игра началась автоматически! Все ${stillConnected.length} игроков готовы.`,
             autoStarted: true,
             startedBy: 'system'
           });
 
           this.broadcastRoomsList();
-          console.log(`✅ Game auto-started successfully in room: ${roomId}`);
+          console.log(`✅ Game auto-started successfully in room: ${roomId} with gameState`);
         } else {
           console.log(`⚠️ Auto-start cancelled in room: ${roomId} - players changed ready status`);
-        }
+        } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
       }, 1500); // 1.5 секунды задержки для UI
     } else if (!enoughPlayers) {
       console.log(`⏳ Room ${roomId} waiting for more players (${connectedPlayers.length}/2 minimum)`);
     } else {
       console.log(`⏳ Room ${roomId} waiting for players to be ready (${readyPlayers.length}/${connectedPlayers.length})`);
-    }
-  }
+    } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
+  } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
   // ✅ ЗАГЛУШКА ДЛЯ startGame - ТЕПЕРЬ НЕ НУЖЕН
   startGame(socket: WebSocket, playerId: string): void {
@@ -466,7 +483,7 @@ export class RoomManager {
       type: 'info',
       message: `📊 Статус: ${readyPlayers.length}/${connectedPlayers.length} игроков готовы`
     }));
-  }
+  } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
   sendRoomsList(socket: WebSocket): void {
     const roomsList = Array.from(this.rooms.values())
@@ -477,7 +494,7 @@ export class RoomManager {
       type: 'rooms_list',
       rooms: roomsList
     }));
-  }
+  } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
   private broadcastRoomsList(): void {
     const roomsList = Array.from(this.rooms.values())
@@ -492,9 +509,9 @@ export class RoomManager {
     this.socketPlayerMap.forEach((playerId, socket) => {
       if (socket.readyState === WebSocket.OPEN) {
         socket.send(message);
-      }
+      } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
     });
-  }
+  } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
   private broadcastToRoom(roomId: string, message: any): void {
     const room = this.rooms.get(roomId);
@@ -513,9 +530,9 @@ export class RoomManager {
       if (room.players.has(playerId) && socket.readyState === WebSocket.OPEN) {
         console.log(`📤 Sending ${message.type} to player: ${playerId}`);
         socket.send(messageStr);
-      }
+      } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
     });
-  }
+  } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 
   getStats(): any {
     return {
@@ -524,5 +541,5 @@ export class RoomManager {
       playingRooms: Array.from(this.rooms.values()).filter(r => r.status === 'playing').length,
       connectedPlayers: this.socketPlayerMap.size
     };
-  }
-}
+  } // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
+} // ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка

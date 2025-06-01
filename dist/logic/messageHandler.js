@@ -1,6 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.roomManager = void 0;
 exports.messageHandler = messageHandler;
+const RoomManager_1 = require("./RoomManager");
+// ✅ СОЗДАЕМ ЭКЗЕМПЛЯР ROOMMANAGER
+const roomManager = new RoomManager_1.RoomManager();
+exports.roomManager = roomManager;
 function messageHandler(socket, message) {
     try {
         const data = JSON.parse(message);
@@ -15,7 +20,7 @@ function messageHandler(socket, message) {
         switch (data.type) {
             /* ────────── Управление комнатами ────────── */
             case 'create_room': {
-                const { name, rules } = data; // ✅ ИСПРАВЛЕНО: используем name вместо roomId
+                const { name, rules } = data;
                 // Валидация данных
                 if (!name || !rules || !rules.maxPlayers) {
                     socket.send(JSON.stringify({
@@ -24,8 +29,8 @@ function messageHandler(socket, message) {
                     }));
                     return;
                 }
-                // Создаем комнату через RoomManager
-                roomManager.createRoom(name, rules, rules.maxPlayers, socket, data.playerId);
+                // ✅ ИСПРАВЛЕНО: используем экземпляр roomManager, убран лишний параметр
+                roomManager.createRoom(name, rules, socket, data.playerId, data.telegramUser);
                 break;
             }
             case 'join_room': {
@@ -37,73 +42,48 @@ function messageHandler(socket, message) {
                     }));
                     return;
                 }
-                roomManager.joinRoom(roomId, socket, data.playerId);
+                // ✅ ИСПРАВЛЕНО: используем экземпляр roomManager
+                roomManager.joinRoom(roomId, socket, data.playerId, data.telegramUser);
                 break;
             }
             case 'leave_room': {
+                // ✅ ИСПРАВЛЕНО: используем экземпляр roomManager
                 roomManager.leaveRoom(socket, data.playerId);
                 break;
             }
             /* ────────── Готовность игрока ────────── */
             case 'set_ready': {
-                const { roomId } = data; // ✅ ИСПРАВЛЕНО: playerId берем из data
-                if (!roomId || !data.playerId) {
-                    socket.send(JSON.stringify({
-                        type: 'error',
-                        message: 'Room ID and Player ID required'
-                    }));
-                    return;
-                }
-                roomManager.setReady(roomId, data.playerId);
+                // ✅ ИСПРАВЛЕНО: используем метод setPlayerReady из RoomManager
+                roomManager.setPlayerReady(socket, data.playerId);
                 break;
             }
             /* ────────── Старт игры ────────── */
             case 'start_game': {
-                const { roomId } = data;
-                if (!roomId) {
-                    socket.send(JSON.stringify({
-                        type: 'error',
-                        message: 'Room ID required'
-                    }));
-                    return;
-                }
-                // Принудительный старт игры (для хоста)
-                const room = roomManager.getRoom(roomId);
-                if (room) {
-                    // Проверяем, что запрос от первого игрока (хоста)
-                    const players = room.getPlayers();
-                    if (players.length > 0 && players[0].id === data.playerId) {
-                        roomManager.handleMessage(socket, data);
-                    }
-                    else {
-                        socket.send(JSON.stringify({
-                            type: 'error',
-                            message: 'Only room creator can start the game'
-                        }));
-                    }
-                }
+                // ✅ ИСПРАВЛЕНО: используем метод startGame из RoomManager
+                roomManager.startGame(socket, data.playerId);
                 break;
             }
             /* ────────── Игровые действия ────────── */
             case 'game_action': {
-                const { roomId, action } = data;
-                if (!roomId || !action || !data.playerId) {
+                const { action } = data;
+                if (!action || !data.playerId) {
                     socket.send(JSON.stringify({
                         type: 'error',
-                        message: 'Room ID, action, and Player ID required'
+                        message: 'Action and Player ID required'
                     }));
                     return;
                 }
-                roomManager.handleGameAction(roomId, data.playerId, action);
+                // ✅ ПОКА ЗАГЛУШКА - в RoomManager нет handleGameAction
+                socket.send(JSON.stringify({
+                    type: 'error',
+                    message: 'Game actions not implemented yet'
+                }));
                 break;
             }
             /* ────────── Список комнат ────────── */
             case 'get_rooms': {
-                const rooms = roomManager.getRooms();
-                socket.send(JSON.stringify({
-                    type: 'rooms_list',
-                    rooms
-                }));
+                // ✅ ИСПРАВЛЕНО: используем метод sendRoomsList из RoomManager
+                roomManager.sendRoomsList(socket);
                 break;
             }
             /* ────────── Heartbeat ────────── */
@@ -116,6 +96,7 @@ function messageHandler(socket, message) {
             }
             /* ────────── Статистика (для отладки) ────────── */
             case 'get_stats': {
+                // ✅ ИСПРАВЛЕНО: используем экземпляр roomManager
                 const stats = roomManager.getStats();
                 socket.send(JSON.stringify({
                     type: 'server_stats',
@@ -129,6 +110,7 @@ function messageHandler(socket, message) {
                     type: 'error',
                     message: `Unknown message type: ${data.type}`
                 }));
+                break; // ✅ ДОБАВЛЕН break
         }
     }
     catch (error) {

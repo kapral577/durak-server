@@ -3,13 +3,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-// server.ts - ПОЛНЫЙ КОД С HTTP АУТЕНТИФИКАЦИЕЙ ДЛЯ TELEGRAM MINI APPS
+// server.ts - УЛУЧШЕННАЯ ВЕРСИЯ ДЛЯ СТАБИЛЬНЫХ WEBSOCKET СОЕДИНЕНИЙ
 const ws_1 = __importDefault(require("ws"));
 const http_1 = __importDefault(require("http"));
 const RoomManager_1 = require("./logic/RoomManager");
 class DurakGameServer {
     constructor() {
         this.authenticatedClients = new Map();
+        this.heartbeatInterval = null; // ✅ ДОБАВЛЕНО
         this.port = parseInt(process.env.PORT || '3001');
         // ✅ HTTP СЕРВЕР С ПОДДЕРЖКОЙ АУТЕНТИФИКАЦИИ
         this.server = http_1.default.createServer((req, res) => {
@@ -23,7 +24,7 @@ class DurakGameServer {
                 res.end();
                 return;
             }
-            // ✅ ОБРАБОТКА POST /auth/telegram (ДОБАВЛЕНО!)
+            // ✅ ОБРАБОТКА POST /auth/telegram
             if (req.method === 'POST' && req.url === '/auth/telegram') {
                 this.handleTelegramAuthHTTP(req, res);
                 return;
@@ -33,7 +34,8 @@ class DurakGameServer {
             res.end(JSON.stringify({
                 status: 'Durak Game Server is running',
                 timestamp: new Date().toISOString(),
-                connectedClients: this.authenticatedClients.size
+                connectedClients: this.authenticatedClients.size,
+                serverUptime: process.uptime()
             }));
         });
         // ✅ ПРИВЯЗЫВАЕМ WebSocket К HTTP СЕРВЕРУ
@@ -61,7 +63,7 @@ class DurakGameServer {
         console.log(`📱 Frontend URL: ${process.env.FRONTEND_URL || 'Not set'}`);
         console.log(`🤖 Bot Token: ${process.env.TELEGRAM_BOT_TOKEN ? '✅ Set' : '❌ Missing'}`);
     }
-    // ✅ НОВЫЙ МЕТОД - HTTP АУТЕНТИФИКАЦИЯ ДЛЯ TELEGRAM MINI APPS
+    // ✅ HTTP АУТЕНТИФИКАЦИЯ ДЛЯ TELEGRAM MINI APPS
     handleTelegramAuthHTTP(req, res) {
         console.log('🔐 HTTP Telegram authentication attempt');
         let body = '';
@@ -133,14 +135,28 @@ class DurakGameServer {
     }
     setupServer() {
         this.wss.on('connection', this.handleConnection.bind(this));
-        // Heartbeat для поддержания соединений
-        setInterval(() => {
-            this.wss.clients.forEach((ws) => {
-                if (ws.readyState === ws_1.default.OPEN) {
-                    ws.ping();
+        // ✅ УЛУЧШЕННЫЙ HEARTBEAT - КАЖДЫЕ 60 СЕКУНД (не 30)
+        this.heartbeatInterval = setInterval(() => {
+            console.log(`💓 Heartbeat check: ${this.authenticatedClients.size} clients`);
+            this.authenticatedClients.forEach((client, socket) => {
+                if (socket.readyState === ws_1.default.OPEN) {
+                    // ✅ ПРОВЕРЯЕМ ПОСЛЕДНИЙ HEARTBEAT ОТ КЛИЕНТА
+                    const timeSinceLastHeartbeat = Date.now() - client.lastHeartbeat.getTime();
+                    if (timeSinceLastHeartbeat > 120000) { // 2 минуты без heartbeat
+                        console.log(`⏰ Client ${client.telegramUser.first_name} heartbeat timeout, disconnecting`);
+                        socket.close(4000, 'Heartbeat timeout');
+                    }
+                    else {
+                        // Отправляем ping
+                        socket.ping();
+                    }
+                }
+                else {
+                    console.log(`🔌 Removing dead socket for ${client.telegramUser.first_name}`);
+                    this.handleDisconnection(socket);
                 }
             });
-        }, 30000);
+        }, 60000); // ✅ 60 секунд вместо 30
         // ✅ ЗАПУСКАЕМ HTTP СЕРВЕР
         this.server.listen(this.port, () => {
             console.log(`✅ HTTP + WebSocket server listening on port ${this.port}`);
@@ -154,7 +170,7 @@ class DurakGameServer {
         const authTimeout = setTimeout(() => {
             console.log('⏰ WebSocket authentication timeout');
             socket.close(4001, 'Authentication timeout');
-        }, 10000);
+        }, 15000); // ✅ 15 секунд вместо 10
         socket.on('message', (data) => {
             try {
                 const message = JSON.parse(data.toString());
@@ -171,6 +187,8 @@ class DurakGameServer {
                         }));
                         return;
                     }
+                    // ✅ ОБНОВЛЯЕМ HEARTBEAT ПРИ ЛЮБОМ СООБЩЕНИИ
+                    client.lastHeartbeat = new Date();
                     this.handleAuthenticatedMessage(client, message);
                 }
             }
@@ -189,9 +207,15 @@ class DurakGameServer {
         });
         socket.on('error', (error) => {
             console.error('❌ WebSocket error:', error);
+            this.handleDisconnection(socket);
         });
+        // ✅ ОБРАБОТКА PONG ОТ КЛИЕНТА
         socket.on('pong', () => {
-            // Heartbeat response received
+            const client = this.authenticatedClients.get(socket);
+            if (client) {
+                client.lastHeartbeat = new Date();
+                console.log(`💓 Pong received from ${client.telegramUser.first_name}`);
+            }
         });
     }
     handleAuthentication(socket, message) {
@@ -219,11 +243,13 @@ class DurakGameServer {
     }
     createAuthenticatedClient(socket, telegramUser, authToken) {
         const playerId = `tg_${telegramUser.id}`;
+        // ✅ ДОБАВЛЕН lastHeartbeat
         const client = {
             socket,
             telegramUser,
             authToken,
-            playerId
+            playerId,
+            lastHeartbeat: new Date() // ✅ ДОБАВЛЕНО
         };
         this.authenticatedClients.set(socket, client);
         socket.send(JSON.stringify({
@@ -242,24 +268,42 @@ class DurakGameServer {
         // Отправляем список комнат после аутентификации
         this.roomManager.sendRoomsList(socket);
     }
+    // ✅ УЛУЧШЕННАЯ ОБРАБОТКА СООБЩЕНИЙ
     handleAuthenticatedMessage(client, message) {
+        console.log(`📨 Message from ${client.telegramUser.first_name}: ${message.type}`);
+        // ✅ ОБРАБОТКА HEARTBEAT СООБЩЕНИЙ
+        if (message.type === 'heartbeat') {
+            client.lastHeartbeat = new Date();
+            client.socket.send(JSON.stringify({
+                type: 'heartbeat_response',
+                timestamp: Date.now()
+            }));
+            return;
+        }
         const enrichedMessage = {
             ...message,
             playerId: client.playerId,
-            telegramUser: client.telegramUser
+            telegramUser: client.telegramUser // ✅ УЖЕ ЕСТЬ - передается в RoomManager
         };
         this.roomManager.handleMessage(client.socket, enrichedMessage);
     }
+    // ✅ УЛУЧШЕННАЯ ОБРАБОТКА ОТКЛЮЧЕНИЙ
     handleDisconnection(socket) {
         const client = this.authenticatedClients.get(socket);
         if (client) {
-            console.log(`❌ User disconnected: ${client.telegramUser.first_name}`);
+            console.log(`❌ User disconnected: ${client.telegramUser.first_name} (${client.playerId})`);
+            // ✅ УВЕДОМЛЯЕМ ROOMMANAGER О DISCONNECT (НЕ LEAVE)
             this.roomManager.handleDisconnection(socket);
             this.authenticatedClients.delete(socket);
+            console.log(`📊 Remaining clients: ${this.authenticatedClients.size}`);
         }
     }
     shutdown() {
         console.log('🛑 Shutting down server...');
+        // ✅ ОЧИСТКА HEARTBEAT INTERVAL
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+        }
         this.wss.close(() => {
             this.server.close(() => {
                 console.log('✅ Server shut down gracefully');
@@ -272,6 +316,7 @@ class DurakGameServer {
         return {
             connectedClients: this.authenticatedClients.size,
             totalConnections: this.wss.clients.size,
+            serverUptime: process.uptime(),
             ...this.roomManager.getStats()
         };
     }
