@@ -1,33 +1,35 @@
-// logic/Room.ts - ИСПРАВЛЕНЫ ТОЛЬКО ОШИБКИ TS
-import WebSocket from 'ws';
-import { GameState, Player } from '../types/GameState';
-import { Rules, RoomInfo } from '../types/Room';
+// durak-server/logic/Room.ts - РЕФАКТОРИРОВАННАЯ ВЕРСИЯ
+
+import type { WebSocket } from 'ws';
+import { GameState, Player, GameRules, Room as RoomType } from '../shared/types';
 
 export class Room {
   public id: string;
   public name: string;
-  public rules: Rules;
+  public rules: GameRules; // ✅ ИСПРАВЛЕНО - используем GameRules из shared
   public maxPlayers: number;
   public status: 'waiting' | 'playing' | 'finished';
   public createdAt: string;
-  
-  private players: Map<string, Player> = new Map();  // ✅ ДОБАВЛЕНА ТИПИЗАЦИЯ
-  private sockets: Map<string, WebSocket> = new Map();  // ✅ ДОБАВЛЕНА ТИПИЗАЦИЯ
+  public hostId: string; // ✅ ДОБАВЛЕНО - ID хоста комнаты
+
+  private players: Map<string, Player> = new Map();
+  private sockets: Map<string, WebSocket> = new Map();
   private gameState: GameState | null = null;
 
-  constructor(id: string, name: string, rules: Rules, maxPlayers: number) {
+  constructor(id: string, name: string, rules: GameRules, hostId: string) {
     this.id = id;
     this.name = name;
     this.rules = rules;
-    this.maxPlayers = maxPlayers;
+    this.maxPlayers = rules.maxPlayers; // ✅ ИСПРАВЛЕНО - берем из rules
     this.status = 'waiting';
     this.createdAt = new Date().toISOString();
+    this.hostId = hostId;
   }
 
   /* ───────────── Управление игроками ───────────── */
 
-  addPlayer(socket: WebSocket, playerId: string): boolean {
-    if (this.players.has(playerId)) {
+  addPlayer(player: Player, socket: WebSocket): boolean {
+    if (this.players.has(player.id)) {
       return false; // Игрок уже в комнате
     }
 
@@ -35,18 +37,13 @@ export class Room {
       return false; // Комната полная
     }
 
-    const player: Player = {
-      id: playerId,
-      name: `Player ${playerId.slice(0, 8)}`,
-      hand: [],
-      isReady: false,
-      telegramId: parseInt(playerId.replace('tg_', '')) || undefined  // ✅ ТЕПЕРЬ РАБОТАЕТ
-    };
-
-    this.players.set(playerId, player);
-    this.sockets.set(playerId, socket);
-
-    console.log(`➕ Player ${playerId} joined room ${this.id}`);
+    this.players.set(player.id, player);
+    this.sockets.set(player.id, socket);
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`➕ Player ${player.name} joined room ${this.id}`);
+    }
+    
     return true;
   }
 
@@ -68,11 +65,33 @@ export class Room {
     if (removedPlayerId) {
       this.players.delete(removedPlayerId);
       this.sockets.delete(removedPlayerId);
-      console.log(`➖ Player ${removedPlayerId} left room ${this.id}`);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`➖ Player ${removedPlayerId} left room ${this.id}`);
+      }
+      
       return true;
     }
 
     return false;
+  }
+
+  disconnectPlayer(playerId: string): void {
+    const player = this.players.get(playerId);
+    if (player) {
+      player.isConnected = false;
+      player.lastSeen = Date.now();
+      this.sockets.delete(playerId);
+    }
+  }
+
+  reconnectPlayer(playerId: string, socket: WebSocket): void {
+    const player = this.players.get(playerId);
+    if (player) {
+      player.isConnected = true;
+      player.lastSeen = Date.now();
+      this.sockets.set(playerId, socket);
+    }
   }
 
   getPlayer(playerId: string): Player | undefined {
@@ -90,6 +109,10 @@ export class Room {
 
   getPlayers(): Player[] {
     return Array.from(this.players.values());
+  }
+
+  getConnectedPlayers(): Player[] {
+    return Array.from(this.players.values()).filter(p => p.isConnected !== false);
   }
 
   getPlayerCount(): number {
@@ -110,13 +133,16 @@ export class Room {
     const player = this.players.get(playerId);
     if (player) {
       player.isReady = !player.isReady;
-      console.log(`🎯 Player ${playerId} ready status: ${player.isReady}`);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🎯 Player ${player.name} ready status: ${player.isReady}`);
+      }
     }
   }
 
   areAllPlayersReady(): boolean {
-    const players = Array.from(this.players.values());
-    return players.length >= 2 && players.every(p => p.isReady);
+    const connectedPlayers = this.getConnectedPlayers();
+    return connectedPlayers.length >= 2 && connectedPlayers.every(p => p.isReady);
   }
 
   /* ───────────── Игровое состояние ───────────── */
@@ -133,31 +159,41 @@ export class Room {
   endGame(winnerId?: string): void {
     this.gameState = null;
     this.status = 'finished';
-    console.log(`🏁 Game ended in room ${this.id}, winner: ${winnerId || 'none'}`);
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🏁 Game ended in room ${this.id}, winner: ${winnerId || 'none'}`);
+    }
   }
 
   /* ───────────── Сообщения ───────────── */
 
-  broadcast(message: string, excludeSocket?: WebSocket): void {
+  broadcast(message: any, excludeSocket?: WebSocket): void {
+    const messageStr = typeof message === 'string' ? message : JSON.stringify(message);
+    
     for (const socket of this.sockets.values()) {
       if (socket !== excludeSocket && socket.readyState === WebSocket.OPEN) {
         try {
-          socket.send(message);
+          socket.send(messageStr);
         } catch (error) {
-          console.error('❌ Error broadcasting message:', error);
+          if (process.env.NODE_ENV === 'development') {
+            console.error('❌ Error broadcasting message:', error);
+          }
         }
       }
     }
   }
 
-  sendToPlayer(playerId: string, message: string): boolean {
+  sendToPlayer(playerId: string, message: any): boolean {
     const socket = this.sockets.get(playerId);
     if (socket && socket.readyState === WebSocket.OPEN) {
       try {
-        socket.send(message);
+        const messageStr = typeof message === 'string' ? message : JSON.stringify(message);
+        socket.send(messageStr);
         return true;
       } catch (error) {
-        console.error(`❌ Error sending message to player ${playerId}:`, error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error(`❌ Error sending message to player ${playerId}:`, error);
+        }
       }
     }
     return false;
@@ -165,7 +201,7 @@ export class Room {
 
   /* ───────────── Публичная информация ───────────── */
 
-  toPublicInfo(): RoomInfo {
+  toPublicInfo(): RoomType {
     return {
       id: this.id,
       name: this.name,
@@ -173,7 +209,8 @@ export class Room {
       maxPlayers: this.maxPlayers,
       rules: this.rules,
       status: this.status,
-      createdAt: this.createdAt
+      createdAt: this.createdAt,
+      hostId: this.hostId,
     };
   }
 }

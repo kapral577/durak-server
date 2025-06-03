@@ -1,121 +1,131 @@
-// logic/messageHandler.ts - ИСПРАВЛЕНЫ ВСЕ СИНТАКСИЧЕСКИЕ ОШИБКИ
-import type { WebSocket } from 'ws';
-import { RoomManager } from './RoomManager';
+// durak-server/logic/messageHandler.ts - РЕФАКТОРИРОВАННАЯ ВЕРСИЯ
 
-// ✅ СОЗДАЕМ ЭКЗЕМПЛЯР ROOMMANAGER
+import type { WebSocket } from 'ws';
+import { WebSocketMessage, TelegramUser } from '../shared/types';
+import { RoomManager } from './RoomManager';
+import { TelegramAuth } from '../auth/TelegramAuth';
+
+// ===== КОНСТАНТЫ =====
+const MESSAGE_RATE_LIMIT = 10; // сообщений в секунду
+const AUTH_TIMEOUT = 30000; // 30 секунд на аутентификацию
+
+// ===== SINGLETON ROOM MANAGER =====
 const roomManager = new RoomManager();
 
-export function messageHandler(socket: WebSocket, message: string): void {
+// ===== RATE LIMITING =====
+const rateLimitMap = new Map<WebSocket, { count: number; resetTime: number }>();
+
+interface AuthenticatedSocket extends WebSocket {
+  playerId?: string;
+  telegramUser?: TelegramUser;
+  isAuthenticated?: boolean;
+  authTimeout?: NodeJS.Timeout;
+}
+
+export function messageHandler(socket: AuthenticatedSocket, message: string): void {
   try {
-    const data = JSON.parse(message);
+    // Rate limiting проверка
+    if (!checkRateLimit(socket)) {
+      sendError(socket, 'Rate limit exceeded');
+      return;
+    }
+
+    const data: WebSocketMessage = JSON.parse(message);
 
     // Базовая валидация
     if (!data.type) {
-      socket.send(JSON.stringify({
-        type: 'error',
-        message: 'Missing message type'
-      }));
+      sendError(socket, 'Missing message type');
+      return;
+    }
+
+    // Аутентификация (кроме authenticate сообщения)
+    if (data.type !== 'authenticate' && !socket.isAuthenticated) {
+      sendError(socket, 'Authentication required');
       return;
     }
 
     switch (data.type) {
+      /* ────────── Аутентификация ────────── */
+      case 'authenticate': {
+        handleAuthentication(socket, data);
+        break;
+      }
+
       /* ────────── Управление комнатами ────────── */
       case 'create_room': {
-        const { name, rules } = data;
-        
-        // Валидация данных
-        if (!name || !rules || !rules.maxPlayers) {
-          socket.send(JSON.stringify({
-            type: 'error',
-            message: 'Invalid room creation data'
-          }));
+        if (!validateRoomCreation(data)) {
+          sendError(socket, 'Invalid room creation data');
           return;
         }
 
-        // ✅ ИСПРАВЛЕНО: используем экземпляр roomManager с telegramUser
-        roomManager.createRoom(name, rules, socket, data.playerId, data.telegramUser);
+        roomManager.createRoom(
+          data.name,
+          data.rules,
+          socket,
+          socket.playerId!,
+          socket.telegramUser!
+        );
         break;
       }
 
       case 'join_room': {
-        const { roomId } = data;
-        if (!roomId) {
-          socket.send(JSON.stringify({
-            type: 'error',
-            message: 'Room ID required'
-          }));
+        if (!data.roomId) {
+          sendError(socket, 'Room ID required');
           return;
         }
 
-        // ✅ ДОБАВЛЕН DEBUG LOG
-        console.log('📄 Join room data:', { 
-          roomId, 
-          playerId: data.playerId, 
-          hasTelegramUser: !!data.telegramUser,
-          telegramUserName: data.telegramUser?.first_name 
-        });
-
-        // ✅ ИСПРАВЛЕНО: используем экземпляр roomManager с telegramUser
-        roomManager.joinRoom(roomId, socket, data.playerId, data.telegramUser);
+        roomManager.joinRoom(
+          data.roomId,
+          socket,
+          socket.playerId!,
+          socket.telegramUser!
+        );
         break;
       }
 
       case 'leave_room': {
-        // ✅ ИСПРАВЛЕНО: используем экземпляр roomManager
-        roomManager.leaveRoom(socket, data.playerId);
+        roomManager.leaveRoom(socket, socket.playerId!);
         break;
       }
 
       /* ────────── Готовность игрока ────────── */
-      case 'set_ready': {
-        // ✅ ИСПРАВЛЕНО: используем метод setPlayerReady из RoomManager
-        roomManager.setPlayerReady(socket, data.playerId);
+      case 'player_ready': {
+        roomManager.setPlayerReady(socket, socket.playerId!);
         break;
       }
 
       /* ────────── Старт игры ────────── */
       case 'start_game': {
-        // ✅ ИСПРАВЛЕНО: используем метод startGame из RoomManager
-        roomManager.startGame(socket, data.playerId);
+        roomManager.startGame(socket, socket.playerId!);
         break;
       }
 
       /* ────────── Игровые действия ────────── */
       case 'game_action': {
-        const { action } = data;
-        if (!action || !data.playerId) {
-          socket.send(JSON.stringify({
-            type: 'error',
-            message: 'Action and Player ID required'
-          }));
+        if (!data.action) {
+          sendError(socket, 'Game action required');
           return;
         }
 
-        // ✅ ПОКА ЗАГЛУШКА - в RoomManager нет handleGameAction
-        socket.send(JSON.stringify({
-          type: 'error',
-          message: 'Game actions not implemented yet'
-        }));
+        // TODO: Реализовать обработку игровых действий
+        roomManager.handleGameAction(socket, socket.playerId!, data.action);
         break;
       }
 
       /* ────────── Список комнат ────────── */
       case 'get_rooms': {
-        // ✅ ИСПРАВЛЕНО: используем метод sendRoomsList из RoomManager
         roomManager.sendRoomsList(socket);
         break;
       }
 
       /* ────────── Heartbeat ────────── */
       case 'heartbeat': {
-        // ✅ ОБРАБОТКА HEARTBEAT
-        roomManager.handleHeartbeat(socket, data.playerId);
+        roomManager.handleHeartbeat(socket, socket.playerId!);
         break;
       }
 
-      /* ────────── Статистика (для отладки) ────────── */
-      case 'get_stats': {
-        // ✅ ИСПРАВЛЕНО: используем экземпляр roomManager
+      /* ────────── Статистика ────────── */
+      case 'get_server_stats': {
         const stats = roomManager.getStats();
         socket.send(JSON.stringify({
           type: 'server_stats',
@@ -125,22 +135,129 @@ export function messageHandler(socket: WebSocket, message: string): void {
       }
 
       default:
-        console.warn('⚠️ Unknown message type:', data.type);
-        socket.send(JSON.stringify({
-          type: 'error',
-          message: `Unknown message type: ${data.type}`
-        }));
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('⚠️ Unknown message type:', data.type);
+        }
+        sendError(socket, `Unknown message type: ${data.type}`);
         break;
-    } // ✅ ДОБАВЛЕНА ЗАКРЫВАЮЩАЯ СКОБКА ДЛЯ SWITCH
+    }
 
   } catch (error) {
-    console.error('❌ Error parsing message:', error);
-    socket.send(JSON.stringify({
-      type: 'error',
-      message: 'Invalid JSON format'
-    }));
+    if (process.env.NODE_ENV === 'development') {
+      console.error('❌ Error parsing message:', error);
+    }
+    sendError(socket, 'Invalid message format');
   }
-} // ✅ ДОБАВЛЕНА ЗАКРЫВАЮЩАЯ СКОБКА ДЛЯ ФУНКЦИИ
+}
 
-// ✅ ЭКСПОРТИРУЕМ ЭКЗЕМПЛЯР ДЛЯ ИСПОЛЬЗОВАНИЯ В server.ts
+// ===== HELPER ФУНКЦИИ =====
+
+function handleAuthentication(socket: AuthenticatedSocket, data: any): void {
+  try {
+    const { token, telegramUser } = data;
+
+    if (!token || !telegramUser) {
+      sendError(socket, 'Token and telegramUser required');
+      return;
+    }
+
+    // Валидация токена
+    const tokenPayload = TelegramAuth.validateAuthToken(token);
+    if (!tokenPayload) {
+      sendError(socket, 'Invalid authentication token');
+      return;
+    }
+
+    // Проверка соответствия токена и пользователя
+    if (tokenPayload.telegramId !== telegramUser.id) {
+      sendError(socket, 'Token mismatch');
+      return;
+    }
+
+    // Успешная аутентификация
+    socket.isAuthenticated = true;
+    socket.playerId = `tg_${telegramUser.id}`;
+    socket.telegramUser = telegramUser;
+
+    // Очищаем таймаут аутентификации
+    if (socket.authTimeout) {
+      clearTimeout(socket.authTimeout);
+      delete socket.authTimeout;
+    }
+
+    // Отправляем подтверждение
+    socket.send(JSON.stringify({
+      type: 'authenticated',
+      player: {
+        id: socket.playerId,
+        name: `${telegramUser.first_name}${telegramUser.last_name ? ' ' + telegramUser.last_name : ''}`,
+        hand: [],
+        isReady: false,
+        isConnected: true,
+        lastSeen: Date.now(),
+        telegramId: telegramUser.id,
+        username: telegramUser.username,
+      }
+    }));
+
+  } catch (error) {
+    sendError(socket, 'Authentication failed');
+  }
+}
+
+function validateRoomCreation(data: any): boolean {
+  return !!(
+    data.name &&
+    typeof data.name === 'string' &&
+    data.name.trim().length > 0 &&
+    data.rules &&
+    typeof data.rules === 'object' &&
+    data.rules.maxPlayers &&
+    data.rules.gameMode &&
+    data.rules.throwingMode &&
+    data.rules.cardCount
+  );
+}
+
+function checkRateLimit(socket: WebSocket): boolean {
+  const now = Date.now();
+  const limit = rateLimitMap.get(socket);
+
+  if (!limit || now > limit.resetTime) {
+    rateLimitMap.set(socket, { count: 1, resetTime: now + 1000 });
+    return true;
+  }
+
+  if (limit.count >= MESSAGE_RATE_LIMIT) {
+    return false;
+  }
+
+  limit.count++;
+  return true;
+}
+
+function sendError(socket: WebSocket, error: string): void {
+  socket.send(JSON.stringify({
+    type: 'error',
+    error
+  }));
+}
+
+// ===== ЭКСПОРТЫ =====
 export { roomManager };
+
+export function setupAuthTimeout(socket: AuthenticatedSocket): void {
+  socket.authTimeout = setTimeout(() => {
+    if (!socket.isAuthenticated) {
+      sendError(socket, 'Authentication timeout');
+      socket.close();
+    }
+  }, AUTH_TIMEOUT);
+}
+
+export function cleanupSocket(socket: AuthenticatedSocket): void {
+  if (socket.authTimeout) {
+    clearTimeout(socket.authTimeout);
+  }
+  rateLimitMap.delete(socket);
+}
